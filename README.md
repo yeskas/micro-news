@@ -1,2 +1,2 @@
-# spring-news
+# micro-news
 
