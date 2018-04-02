@@ -1,11 +1,14 @@
 from flask import Flask
+from flask import render_template
+
+
 app = Flask(__name__)
 
 
 # Landing page with suggested news and user info
 @app.route('/')
 def index():
-	return 'Hello, World! Welcome to micro-news!'
+	return render_template('news.html')
 
 
 # User clicked on news item to read
