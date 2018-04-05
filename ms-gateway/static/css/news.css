@@ -1,5 +1,9 @@
+body {
+	background-color: #f8f8f8;
+}
+
 .top-bar {
-	margin-bottom: 20px;
+	margin-bottom: 10px;
 	background-color: #181818;
 	color: white;
 }
@@ -16,14 +20,15 @@ a:link, a:visited, a:hover, a:active {
 }
 
 .news-item-wrapper {
-	margin-bottom: 20px;
+	margin-bottom: 10px;
 	border: 1px solid #e0e0e0;
 /*	border: 1px solid #a0a0a0;*/
 	border-radius: 2px;
 	padding: 10px;
+	background-color: white;
 }
 
-.news-item-thumbnail {
+.news-item-image {
 	border-radius: 2px;
 	object-fit: cover;
 	width: 200px;
@@ -34,7 +39,7 @@ a:link, a:visited, a:hover, a:active {
 	color: #181818;
 }
 
-.news-item-source-thumbnail {
+.news-item-source-image {
 	object-fit: cover;
 	width: 20px;
 	height: 20px;
