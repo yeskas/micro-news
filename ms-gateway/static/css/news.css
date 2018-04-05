@@ -13,19 +13,21 @@ body {
 	color: red;
 }
 
-/* Remove default styles for a tag */
-a:link, a:visited, a:hover, a:active {
-	color: black;
-	text-decoration: none;
-}
-
 .news-item-wrapper {
 	margin-bottom: 10px;
 	border: 1px solid #e0e0e0;
-/*	border: 1px solid #a0a0a0;*/
 	border-radius: 2px;
 	padding: 10px;
 	background-color: white;
+}
+
+/* Remove default styles for a tag */
+.news-item-wrapper a:link,
+.news-item-wrapper a:visited,
+.news-item-wrapper a:hover,
+.news-item-wrapper a:active {
+	color: black;
+	text-decoration: none;
 }
 
 .news-item-image {
@@ -39,7 +41,7 @@ a:link, a:visited, a:hover, a:active {
 	color: #181818;
 }
 
-.news-item-source-image {
+.news-item-source-icon {
 	object-fit: cover;
 	width: 20px;
 	height: 20px;
@@ -56,7 +58,7 @@ a:link, a:visited, a:hover, a:active {
 	color: red;
 }
 
-/* Used to vertically stick the user's name  */
+/* Used to vertically stick the user greeting  */
 .affix {
 	top: 20px;
 	z-index: 9999 !important;
