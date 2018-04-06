@@ -1,5 +1,10 @@
+import json
+
 from flask import Flask
 from flask import render_template
+from flask import request
+from flask import Response
+from flask import session
 
 
 app = Flask(__name__)
@@ -8,6 +13,32 @@ app = Flask(__name__)
 # Landing page with suggested news and user info
 @app.route('/')
 def index():
+	if 'user_id' in session:
+		# retrieve existing user
+
+		# TODO:
+		# - get user info from ms-user-mgmt
+
+		# tmp code
+		user = {
+			'is_new': False,
+			'name': 'Bob'
+		}
+
+	else:
+		# save new user
+		# TODO:
+		# - save user & get id from user-mgmt
+		# - set session id to the new user_id
+
+		# tmp code
+		session['user_id'] = 0
+		user = {
+			'is_new': True,
+			'name': None
+		}
+
+	# retrieve news
 	items = [
 		{
 			'title': 'Masters: Tiger Woods, Rory McIlroy, Justin Rose tee times announced',
@@ -47,20 +78,51 @@ def index():
 		}
 	] * 4
 
-	return render_template('news.html', items=items)
+	return render_template('news.html', user=user, items=items)
 
 
 # User clicked on news item to read
-# TODO: remove GET method
-@app.route('/item_clicked', methods=['GET', 'POST'])
+@app.route('/set_user_name', methods=['POST'])
+def set_user_name():
+	if 'user_id' not in session:
+		abort(401)
+
+	user_name = request.form.get('user_name', '').strip()
+	if user_name == '':
+		data = {
+			'user_name': '',
+			'is_valid': False,
+		}
+	else:
+		# TODO
+		# - save to ms-user-mgmt
+		data = {
+			'user_name': user_name,
+			'is_valid': True,
+		}
+
+	return Response(
+		json.dumps(data),
+		status=200,
+		mimetype='application/json'
+	)
+
+
+# User clicked on news item to read
+@app.route('/item_clicked', methods=['POST'])
 def item_clicked():
+	if 'user_id' not in session:
+		abort(401)
+
 	return 'All tags of the news incremented for user'
 
 
 # User removed the news item from feed
-# TODO: remove GET method
-@app.route('/item_removed', methods=['GET', 'POST'])
+@app.route('/item_removed', methods=['POST'])
 def item_removed():
+	if 'user_id' not in session:
+		abort(401)
+
 	return 'All tags of the news decremented for user'
 
 

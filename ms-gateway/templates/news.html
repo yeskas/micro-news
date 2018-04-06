@@ -11,6 +11,17 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 	<script src="{{ url_for('static', filename='js/news.js') }}"></script>
+
+	<script>
+		{% if user.name %}
+			{# the user has set their name #}
+		{% else %}
+			{# ask user for name #}
+			$(document).ready(function(){
+				trigger_user_name_modal();
+			});
+		{% endif %}
+	</script>
 </head>
 
 <body>
@@ -49,6 +60,7 @@
 										<img src="{{ item.source.icon }}" class="media-object news-item-source-icon">
 									</div>
 									<div class="media-body">
+										{% set tooltip_title = ' ' %}
 										<a href="{{ item.source.link }}" target="_blank">
 											{{ item.source.name }}
 										</a>
@@ -61,12 +73,43 @@
 			</div>
 
 			<div class="col-md-2">
+				<button id="modal-trigger" type="button" data-toggle="modal" data-target="#user-name-modal">.</button>
+
 				<div class="user-greeting" data-spy="affix" data-offset-top="205">
-					Welcome back, <span id="user-name">Alex</span> &#x1F44B
+					{% if user.is_new %}
+						Welcome, <span id="user-name">Guest</span> &#x1F44B
+					{% else %}
+						{% set user_name = user.name or 'Guest' %}
+						Welcome back, <span id="user-name">{{ user_name }}</span> &#x1F44B
+					{% endif %}
 				</div>
 			</div>
 
 			<div class="col-md-1"></div>
+		</div>
+	</div>
+
+	{# The modal to ask for new user's name #}
+	<div id="user-name-modal" class="modal fade" role="dialog">
+		<div class="modal-dialog">
+
+			<!-- Modal content-->
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+					<h4 class="modal-title">Welcome to µ-news!</h4>
+				</div>
+				<div class="modal-body">
+					<form class="form-inline">
+						<span id="user-name-prompt">What's your name?</span>
+						<input id="user-name-form" type="text" class="form-control" value="Alex">
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button id="user-name-save" type="button" class="btn btn-success" data-dismiss="modal">Save</button>
+				</div>
+			</div>
+
 		</div>
 	</div>
 
