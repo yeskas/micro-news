@@ -1,2 +1,5 @@
 # byte code files
 *.pyc
+
+# session secret code
+secret_key.py

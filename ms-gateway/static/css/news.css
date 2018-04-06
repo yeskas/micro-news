@@ -54,7 +54,7 @@ body {
 	padding: 10px;
 }
 
-.user-greeting .user-name {
+#user-name {
 	color: red;
 }
 

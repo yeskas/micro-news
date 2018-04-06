@@ -46,6 +46,7 @@ def index():
 			}
 		}
 	] * 4
+
 	return render_template('news.html', items=items)
 
 
@@ -61,3 +62,8 @@ def item_clicked():
 @app.route('/item_removed', methods=['GET', 'POST'])
 def item_removed():
 	return 'All tags of the news decremented for user'
+
+
+# Encrypt sessions with this
+from secret_key import secret_key
+app.secret_key = secret_key
