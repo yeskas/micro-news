@@ -4,6 +4,9 @@ function trigger_user_name_modal() {
 }
 
 $(document).ready(function(){
+	// Enable all tooltips
+	$('[data-toggle="tooltip"]').tooltip();
+
 	// Handler to set user name and change greeting on response
 	$("#user-name-save").click(function() {
 		var user_name = $("#user-name-form").val();

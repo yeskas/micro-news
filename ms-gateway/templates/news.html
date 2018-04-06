@@ -50,7 +50,11 @@
 								<img src="{{ item.image }}" class="media-object news-item-image">
 							</div>
 							<div class="media-body">
-								<a href="{{ item.link }}" target="_blank">
+								<a
+									href="{{ item.link }}"
+									data-toggle="tooltip"
+									title="Click to read on {{item.source.name}}"
+									target="_blank">
 									<h4 class="media-heading">{{ item.title }}</h4>
 								</a>
 
