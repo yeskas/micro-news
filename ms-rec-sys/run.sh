@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-mvn spring-boot:run
+sbt run
