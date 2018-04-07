@@ -17,9 +17,8 @@ public class UserController {
 	@Autowired
 	private UserRepository userRepository;
 
-	// TODO: change to PostMapping
-	@GetMapping(path="/add")
-	public @ResponseBody User addNewUser (@RequestParam String name) {
+	@PostMapping(path="/add")
+	public @ResponseBody User addNewUser (@RequestParam(required = false) String name) {
 		User user = new User();
 		user.setName(name);
 		userRepository.save(user);
@@ -32,8 +31,7 @@ public class UserController {
 		return user;
 	}
 
-	// TODO: change to PostMapping
-	@GetMapping(path="/edit")
+	@PostMapping(path="/edit")
 	public @ResponseBody User editUser (@RequestParam Integer id, @RequestParam String name) {
 		User user = userRepository.findById(id).get();
 		user.setName(name);

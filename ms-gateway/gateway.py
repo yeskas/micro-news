@@ -1,4 +1,5 @@
 import json
+import requests
 
 from flask import Flask
 from flask import render_template
@@ -6,8 +7,14 @@ from flask import request
 from flask import Response
 from flask import session
 
+from config import http_addr
+
 
 app = Flask(__name__)
+
+# Encrypt sessions with this
+from secret_key import secret_key
+app.secret_key = secret_key
 
 
 # Landing page with suggested news and user info
@@ -15,28 +22,24 @@ app = Flask(__name__)
 def index():
 	if 'user_id' in session:
 		# retrieve existing user
+		user = requests.get(
+			'%s/users/get' % http_addr('ms-user-mgmt'),
+			params={'id': session['user_id']}
+		).json()
 
-		# TODO:
-		# - get user info from ms-user-mgmt
-
-		# tmp code
-		user = {
-			'is_new': False,
-			'name': 'Bob'
-		}
+		user['is_new'] = False
 
 	else:
 		# save new user
-		# TODO:
-		# - save user & get id from user-mgmt
-		# - set session id to the new user_id
+		user = requests.post(
+			'%s/users/add' % http_addr('ms-user-mgmt'),
+			data={}
+		).json()
 
-		# tmp code
-		session['user_id'] = 0
-		user = {
-			'is_new': True,
-			'name': None
-		}
+		user['is_new'] = True
+
+		# store id in session
+		session['user_id'] = user['id']
 
 	# retrieve news
 	items = [
@@ -89,13 +92,19 @@ def set_user_name():
 
 	user_name = request.form.get('user_name', '').strip()
 	if user_name == '':
+		# return as invalid
 		data = {
 			'user_name': '',
 			'is_valid': False,
 		}
+
 	else:
-		# TODO
-		# - save to ms-user-mgmt
+		# save to ms-user-mgmt & return as valid
+		requests.post(
+			'%s/users/edit' % http_addr('ms-user-mgmt'),
+			data={'id': session['user_id'], 'name': user_name}
+		).json()
+
 		data = {
 			'user_name': user_name,
 			'is_valid': True,
@@ -124,8 +133,3 @@ def item_removed():
 		abort(401)
 
 	return 'All tags of the news decremented for user'
-
-
-# Encrypt sessions with this
-from secret_key import secret_key
-app.secret_key = secret_key
