@@ -19,6 +19,4 @@ libraryDependencies += "javax.xml.bind" % "jaxb-api" % "2.1"
 // play.sbt.routes.RoutesKeys.routesImport += "com.github.yeskas.binders._"
 
 // Cassandra client
-//libraryDependencies ++= Seq(
-//	"com.outworkers"  %% "phantom-dsl" % "2.23.0"
-//)
+libraryDependencies += "com.datastax.cassandra" % "cassandra-driver-core" % "3.4.0"

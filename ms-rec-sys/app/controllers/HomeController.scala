@@ -1,10 +1,14 @@
 package controllers
 
+// TODO: don't use "_" in imports
 import javax.inject._
 import play.api._
 import play.api.mvc._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+
+import com.datastax.driver.core.{Cluster, ResultSet, Row}
+
 
 
 case class NewsItem(title: String, body: String, order: Int)
@@ -23,6 +27,21 @@ class HomeController @Inject()(cc: ControllerComponents) extends AbstractControl
 		(JsPath \ "order").write[Int]
 	)(unlift(NewsItem.unapply))
 
+	object CassandraClient {
+		private val cluster = Cluster.builder()
+			.addContactPoint("localhost")
+			.withPort(9042)
+			.build()
+
+		val session = cluster.connect()
+
+		def getValueFromCassandraTable() = {
+			val rs = session.execute("SELECT * FROM test01.countries")
+			val row = rs.one()
+			(row.getInt("id"), row.getString("official_name"), row.getString("capital_city"))
+		}
+	}
+
 	/**
 	* Create an Action to render an HTML page.
 	*
@@ -32,6 +51,10 @@ class HomeController @Inject()(cc: ControllerComponents) extends AbstractControl
 	*/
 	def index() = Action { implicit request: Request[AnyContent] =>
 		val newsItem = NewsItem("MU beat MC", "This Saturday MU beat MC, which delayed MC's championship by at least 1 week", 55)
+
+		val result = CassandraClient.getValueFromCassandraTable()
+		println(result)
+
 		Ok(Json.toJson(newsItem))
 	}
 }
