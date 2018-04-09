@@ -1,5 +1,5 @@
 //#full-example
-package news
+package tagger
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }
 

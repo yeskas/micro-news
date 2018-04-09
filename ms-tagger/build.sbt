@@ -1,4 +1,4 @@
-name := "ms-news-mgmt"
+name := "ms-tagger"
 
 version := "1.0"
 
