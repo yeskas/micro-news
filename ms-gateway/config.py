@@ -4,6 +4,13 @@ service_registry = {
 			'host': 'localhost',
 			'port': 8080
 		}
+	},
+
+	'ms-rec-sys': {
+		'http': {
+			'host': 'localhost',
+			'port': 9000
+		}
 	}
 }
 

@@ -36,9 +36,9 @@ class HomeController @Inject()(cc: ControllerComponents) extends AbstractControl
 		val session = cluster.connect()
 
 		def getValueFromCassandraTable() = {
-			val rs = session.execute("SELECT * FROM test01.countries")
+			val rs = session.execute("SELECT * FROM test01.cluster_news WHERE id = 1")
 			val row = rs.one()
-			(row.getInt("id"), row.getString("official_name"), row.getString("capital_city"))
+			(row.getInt("id"), row.getString("news_json"))
 		}
 	}
 
@@ -55,6 +55,7 @@ class HomeController @Inject()(cc: ControllerComponents) extends AbstractControl
 		val result = CassandraClient.getValueFromCassandraTable()
 		println(result)
 
-		Ok(Json.toJson(newsItem))
+		// Ok(Json.toJson(newsItem))
+		Ok(Json.parse(result._2))
 	}
 }
