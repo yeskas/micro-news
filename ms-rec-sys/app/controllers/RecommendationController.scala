@@ -1,5 +1,6 @@
 package controllers
 
+
 // TODO: don't use "_" in imports
 import javax.inject._
 import play.api._
@@ -8,7 +9,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import com.datastax.driver.core.{Cluster, ResultSet, Row}
-
 
 
 case class NewsItem(title: String, body: String, order: Int)
