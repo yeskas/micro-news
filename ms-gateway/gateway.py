@@ -51,7 +51,7 @@ def index():
 	return render_template('news.html', user=user, items=items)
 
 
-# User clicked on news item to read
+# User changed their name in the modal
 @app.route('/set_user_name', methods=['POST'])
 def set_user_name():
 	if 'user_id' not in session:
