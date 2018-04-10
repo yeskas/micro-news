@@ -44,8 +44,8 @@ def index():
 
 	# Fetch the latest news recommended for this user from ms-rec-sys
 	items = requests.get(
-		'%s/' % http_addr('ms-rec-sys'),
-		params={'id': session['user_id']}
+		'%s/rec' % http_addr('ms-rec-sys'),
+		params={'userId': session['user_id']}
 	).json()
 
 	return render_template('news.html', user=user, items=items)
