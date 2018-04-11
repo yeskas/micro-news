@@ -5,16 +5,6 @@ CREATE TABLE users (
 	cluster_id INT
 );
 
-CREATE TABLE articles (
-	id INT PRIMARY KEY,
-    body_json TEXT
-);
-
-CREATE TABLE clusters (
-	id INT PRIMARY KEY,
-	articles_json TEXT
-);
-
 CREATE TABLE user_tags (
 	id INT PRIMARY KEY,
 	neuroscience INT,
@@ -25,6 +15,11 @@ CREATE TABLE user_tags (
 	software INT
 );
 
+CREATE TABLE articles (
+	id INT PRIMARY KEY,
+    body_json TEXT
+);
+
 CREATE TABLE article_tags (
 	id INT PRIMARY KEY,
 	neuroscience INT,
@@ -33,6 +28,11 @@ CREATE TABLE article_tags (
 	technology INT,
 	family INT,
 	software INT
+);
+
+CREATE TABLE clusters (
+	id INT PRIMARY KEY,
+	articles_json TEXT
 );
 
 CREATE TABLE cluster_tags (

@@ -32,6 +32,26 @@ class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionCont
 	actorSystem.scheduler.schedule(initialDelay = 1.second, interval = 1.hour) {
 		println("--- Starting the Recluster task ---")
 
+		// 1. pull all user_tags into memory
+
+		// 2. normalize all
+
+		// 3. run K-mean clustering:
+		// - get cluster -> weights map
+		// - get user_id -> cluster_id map
+
+		// 4. save user_id -> cluster_id in a tmp table
+
+		// 5. pull all articles & article_tags into memory
+
+		// 6. build cluster_id -> articles_json map
+
+		// 7. insert into clusters table
+
+		// 8. insert into cluster_tags table
+
+		// 9. wait & update user_id -> cluster_id
+
 		val result = CassandraClient.getValueFromCassandraTable()
 		println(result)
 
