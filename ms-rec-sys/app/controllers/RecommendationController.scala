@@ -35,9 +35,9 @@ class RecommendationController @Inject()(cc: ControllerComponents) extends Abstr
 		val session = cluster.connect()
 
 		def getValueFromCassandraTable() = {
-			val rs = session.execute("SELECT * FROM test01.cluster_news WHERE id = 1")
+			val rs = session.execute("SELECT * FROM test01.clusters WHERE id = 0")
 			val row = rs.one()
-			(row.getInt("id"), row.getString("news_json"))
+			(row.getInt("id"), row.getString("articles_json"))
 		}
 	}
 

@@ -1,9 +1,18 @@
-CREATE TABLE news (
+-- These are cql queries, but using the .sql extension for the IDE
+
+CREATE TABLE users (
 	id INT PRIMARY KEY,
-	title TEXT,
-	body TEXT,
-	link TEXT,
-	img_link TEXT
+	cluster_id INT
+);
+
+CREATE TABLE articles (
+	id INT PRIMARY KEY,
+    body_json TEXT
+);
+
+CREATE TABLE clusters (
+	id INT PRIMARY KEY,
+	articles_json TEXT
 );
 
 CREATE TABLE user_tags (
@@ -16,7 +25,7 @@ CREATE TABLE user_tags (
 	software INT
 );
 
-CREATE TABLE news_tags (
+CREATE TABLE article_tags (
 	id INT PRIMARY KEY,
 	neuroscience INT,
 	javascript INT,
@@ -26,7 +35,7 @@ CREATE TABLE news_tags (
 	software INT
 );
 
-CREATE TABLE cluster_weights (
+CREATE TABLE cluster_tags (
 	id INT PRIMARY KEY,
 	neuroscience DOUBLE,
 	javascript DOUBLE,
@@ -34,9 +43,4 @@ CREATE TABLE cluster_weights (
 	technology DOUBLE,
 	family DOUBLE,
 	software DOUBLE
-);
-
-CREATE TABLE cluster_news (
-	id INT PRIMARY KEY,
-	news_json TEXT
 );
