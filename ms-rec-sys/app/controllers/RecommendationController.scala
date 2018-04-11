@@ -7,8 +7,9 @@ import play.api._
 import play.api.mvc._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-
 import com.datastax.driver.core.{Cluster, ResultSet, Row}
+
+import scala.collection.mutable
 
 
 case class NewsItem(title: String, body: String, order: Int)
@@ -39,6 +40,19 @@ class RecommendationController @Inject()(cc: ControllerComponents) extends Abstr
 			val row = rs.one()
 			(row.getInt("id"), row.getString("articles_json"))
 		}
+
+		def getArticlesJsonForUser(userId: Int) : String = {
+			// First, read user's cluster; cluster 0 is the default;
+			var rs = session.execute(s"SELECT cluster_id FROM test01.users WHERE id = $userId")
+			var row = rs.one()
+			val clusterId = if (row == null) 0 else row.getInt("cluster_id");
+
+			// Next, read best-matching articles of this cluster
+			rs = session.execute(s"SELECT articles_json FROM test01.clusters WHERE id = $clusterId")
+			row = rs.one()
+			row.getString("articles_json")
+		}
+
 	}
 
 	/**
@@ -54,6 +68,9 @@ class RecommendationController @Inject()(cc: ControllerComponents) extends Abstr
 		println(s"Pulling rec for user #$userId")
 
 		// Ok(Json.toJson(newsItem))
-		Ok(Json.parse(result._2))
+		// Ok(Json.parse(result._2))
+
+		val articlesJson = CassandraClient.getArticlesJsonForUser(userId)
+		Ok(Json.parse(articlesJson))
 	}
 }
