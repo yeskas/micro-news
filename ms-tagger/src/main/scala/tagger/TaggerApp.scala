@@ -66,10 +66,9 @@ class Printer extends Actor with ActorLogging {
 //#printer-actor
 
 
-case class NewsItem(link: String, title: String, img_link: String, body: String)
+case class Article(link: String, title: String, img_link: String, body: String)
 
 // Info on words related to tag words
-case class WordLink(word: String, score: Double)
 case class Link(word: String, score: Double)
 case class Tag(word: String, links: List[Link])
 
@@ -90,12 +89,12 @@ object Tagger {
 		json.extract[List[Tag]]
 	}
 
-	def tagNewsItem(newsItem: NewsItem): Array[String] = {
+	def tagArticle(article: Article): Array[String] = {
 		// parse out all words & count occurrences
 		val wordRegex = "(\\w+)".r
 
-		val titleWords = wordRegex.findAllIn(newsItem.title.toLowerCase()).toList
-		val bodyWords = wordRegex.findAllIn(newsItem.body.toLowerCase()).toList
+		val titleWords = wordRegex.findAllIn(article.title.toLowerCase()).toList
+		val bodyWords = wordRegex.findAllIn(article.body.toLowerCase()).toList
 
 		val allWords = titleWords ++ bodyWords
 		val wordToOccurrences = allWords.groupBy(word=>word).mapValues(_.size)
@@ -132,14 +131,14 @@ object Tagger {
 object TaggerApp extends App {
 	println("STARTING THE TAGGER")
 
-	val item = NewsItem(
+	val artile = Article(
 		"https://techcrunch.com/2018/04/08/tencent-and-education-startup-age-of-learning-bring-popular-english-learning-app-abcmouse-to-china/",
 		"Tencent and education startup Age of Learning bring popular English-learning app ABCmouse to China",
 		"https://techcrunch.com/wp-content/uploads/2018/04/tencent_abcmouse_header.jpg?w=586",
 		"Tencent is teaming up with Los Angeles-based education company Age of Learning to launch an English education program for kids in China. ABCmouse, Age of Learning’s flagship product, has been localized and will be available as a website and an iOS and Android app in China, with Tencent handling product development, marketing, sales and customer support.\nThe new partnership extends Tencent’s involvement in ed-tech, which already includes a strategic investment in VIPKID, an online video tutoring platform that connects Chinese kids with English teachers and competes with QKids and Dada ABC. ABCmouse, on the other hand, uses videos, books and online activities like games, songs and stories to help kids study English.\nThe Chinese version of ABCmouse includes integration with Tencent’s ubiquitous messenger and online services platform WeChat, which now has more than one billion users, and its instant messaging service QQ, with 783 million monthly active users. This makes it easier for parents to sign up and pay for ABCmouse, because they can use their WeChat or QQ account and payment information. It also allows families to share kids’ English-learning progress on their news feeds or in chats. For example, Jerry Chen, Age of Learning’s president of Greater China, says parents can send video or audio recordings of their children practicing English to grandparents, who can then buy gift subscriptions with one click.\nThough you probably haven’t heard of it unless you have young kids or work with elementary school-age children, Age of Learning has built a significant presence in online education since it was founded in 2007, thanks mainly to the popularity of ABCmouse in schools, public libraries and Head Start programs. Two years ago, Age of Learning hit unicorn status after raising $150 million at a $1 billion valuation from Iconiq Capital.\nThe partnership lets ABCmouse tap into a major new audience. Chen says there are more than 110 million kids between the ages of three to eight in China and the online English language learning market there is “a several billion dollar market that’s growing rapidly.” He points to a recent study by Chinese research agency Yiou Intelligence that says total spending on online English learning programs for children will be 29.41 billion RMB, or about $4.67 billion, this year, and is projected to reach 79.17 billion, or $12.6 billion, by 2022.\nThe localization of ABCmouse will extend to the design of its eponymous cartoon rodent, who has a more stylized appearance in China. Lessons include animations featuring an English teacher and students in an international school classroom and begin with listening comprehension and speaking before moving onto phonics, reading and writing. Tencent-Age of Learning products will also include speech recognition tools to help kids hone their English pronunciation.\nIn an email, Jason Chen, Tencent’s general manager of online education, said that the company “reviewed several companies through an extensive research process, and it became clear that ABCmouse had the most engaging and effective online English self-learning curriculum and content for children. Age of Learning puts learning first, and that commitment to educational excellence made them a perfect fit for our online English language learning business.”"
 	)
 
-	val tags = Tagger.tagNewsItem(item)
+	val tags = Tagger.tagArticle(artile)
 
 	if (tags.length > 0) {
 		println("Assigned some tags, need to send to REC-SYS")
