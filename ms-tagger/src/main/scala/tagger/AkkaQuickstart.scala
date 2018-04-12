@@ -2,7 +2,12 @@
 package tagger
 
 
+import scala.collection.mutable.ArrayBuffer
+
 import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }
+
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
 
 //#greeter-companion
@@ -63,68 +68,27 @@ class Printer extends Actor with ActorLogging {
 
 case class NewsItem(link: String, title: String, img_link: String, body: String)
 
-
+// Info on words related to tag words
 case class WordLink(word: String, score: Double)
+case class Link(word: String, score: Double)
+case class Tag(word: String, links: List[Link])
 
 
 object Tagger {
-	private val tagToWordLinks = Map(
-		"neuroscience"->Array(
-			WordLink("affective", 0.060645),
-			WordLink("cognitive", 0.050082),
-			WordLink("neurology", 0.048206),
-			WordLink("neural", 0.042843),
-			WordLink("plasticity", 0.034417),
-			WordLink("learning", 0.024417),
-		),
+	private val allTags = parseTags()
 
-		"javascript"->Array(
-			WordLink("browsers", 0.057233),
-			WordLink("css", 0.055593),
-			WordLink("scripting", 0.052849),
-			WordLink("widgets", 0.050512),
-			WordLink("netscape", 0.045265),
-			WordLink("click", 0.035265),
-		),
-
-		"literature"->Array(
-			WordLink("literatures", 0.32747),
-			WordLink("sangam", 0.234733),
-			WordLink("rabbinic", 0.186105),
-			WordLink("comparative", 0.153657),
-			WordLink("sahitya", 0.140819),
-			WordLink("educational", 0.130819),
-		),
-
-		"technology"->Array(
-			WordLink("commercialization", 0.232641),
-			WordLink("deloitte", 0.228937),
-			WordLink("advancements", 0.227261),
-			WordLink("birla", 0.205266),
-			WordLink("incubator", 0.192419),
-			WordLink("products", 0.092419),
-			WordLink("program", 0.082419),
-		),
-
-		"family"->Array(
-			WordLink("fabaceae", 1.071),
-			WordLink("conidae", 0.997544),
-			WordLink("gracillariidae", 0.994959),
-			WordLink("leptodactylidae", 0.993837),
-			WordLink("muricidae", 0.992335),
-			WordLink("age", 0.792335),
-			WordLink("kids", 0.692335)
-		),
-
-		"software"->Array(
-			WordLink("antivirus", 0.435473),
-			WordLink("gpl", 0.404681),
-			WordLink("shareware", 0.390798),
-			WordLink("gnu", 0.335025),
-			WordLink("spyware", 0.332242),
-			WordLink("tencent", 0.232),
-		),
-	)
+	private def parseTags() : List[Tag] = {
+		implicit val formats = DefaultFormats
+		val json = parse("""[
+			{"word": "neuroscience", "links": [{"word": "learning", "score": 0.024417}]},
+			{"word": "javascript", "links": [{"word": "click", "score": 0.035265}]},
+			{"word": "literature", "links": [{"word": "educational", "score": 0.130819}]},
+			{"word": "technology", "links": [{"word": "products", "score": 0.092419}, {"word": "program", "score": 0.082419}]},
+			{"word": "family", "links": [{"word": "age", "score": 0.792335}, {"word": "kids", "score": 0.692335}]},
+			{"word": "software", "links": [{"word": "tencent", "score": 0.232}]}
+        ]""")
+		json.extract[List[Tag]]
+	}
 
 	def tagNewsItem(newsItem: NewsItem): Array[String] = {
 		// parse out all words & count occurrences
@@ -138,21 +102,22 @@ object Tagger {
 
 		// score each potential tag, based on # of occurrences and it's relevance
 		// i.e. scalar multiplication of occurrences-vector & scores-vector
-		var tagScores = Array[(String, Double)]()
-		for ((tag, wordLinks) <- tagToWordLinks) {
+		val tagScores = new ArrayBuffer[(String, Double)]()
+		for (tag <- allTags) {
 			var score = 0.0
 
-			for (wordLink <- wordLinks) {
-				val count = wordToOccurrences.getOrElse(wordLink.word, 0)
-				score += wordLink.score * count
+			for (link <- tag.links) {
+				val count = wordToOccurrences.getOrElse(link.word, 0)
+				score += link.score * count
 			}
 
-			println(s"Score for $tag is $score")
-			tagScores = tagScores :+ (tag, score)
+			println(s"Score for ${tag.word} is $score")
+			tagScores += ((tag.word, score))
 		}
 
 		// keep top up-to-5 non-zero tags
 		val topTags = tagScores
+			.toArray
 			.filter(tagScore => tagScore._2 > 0)
 			.sortWith(_._2 > _._2)
 			.slice(0, 3)
@@ -182,6 +147,7 @@ object AkkaQuickstart extends App {
 	} else {
 		println("Wasn't able to assign any tags, IGNORING this news item")
 	}
+
 
 	//	import Greeter._
 	//
