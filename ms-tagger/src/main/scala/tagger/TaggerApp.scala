@@ -3,6 +3,7 @@ package tagger
 
 
 import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }
 
@@ -73,19 +74,18 @@ case class Link(word: String, score: Double)
 case class Tag(word: String, links: List[Link])
 
 
-object Tagger {
+class Tagger(tagsFilePath: String) {
 	private val allTags = parseTags()
 
+	// Read entire tags file into memory, since it's small in size
 	private def parseTags() : List[Tag] = {
+		println(s"Parsing tags data from: $tagsFilePath")
+
+		val source = scala.io.Source.fromFile(tagsFilePath)
+		val tagsJson = try source.mkString finally source.close()
+
 		implicit val formats = DefaultFormats
-		val json = parse("""[
-			{"word": "neuroscience", "links": [{"word": "learning", "score": 0.024417}]},
-			{"word": "javascript", "links": [{"word": "click", "score": 0.035265}]},
-			{"word": "literature", "links": [{"word": "educational", "score": 0.130819}]},
-			{"word": "technology", "links": [{"word": "products", "score": 0.092419}, {"word": "program", "score": 0.082419}]},
-			{"word": "family", "links": [{"word": "age", "score": 0.792335}, {"word": "kids", "score": 0.692335}]},
-			{"word": "software", "links": [{"word": "tencent", "score": 0.232}]}
-        ]""")
+		val json = parse(tagsJson)
 		json.extract[List[Tag]]
 	}
 
@@ -119,7 +119,7 @@ object Tagger {
 			.toArray
 			.filter(tagScore => tagScore._2 > 0)
 			.sortWith(_._2 > _._2)
-			.slice(0, 3)
+			.slice(0, 5)
 			.map(tagScore => tagScore._1)
 
 		topTags
@@ -131,6 +131,8 @@ object Tagger {
 object TaggerApp extends App {
 	println("STARTING THE TAGGER")
 
+	val tagger = new Tagger("util/tags.json")
+
 	val artile = Article(
 		"https://techcrunch.com/2018/04/08/tencent-and-education-startup-age-of-learning-bring-popular-english-learning-app-abcmouse-to-china/",
 		"Tencent and education startup Age of Learning bring popular English-learning app ABCmouse to China",
@@ -138,7 +140,7 @@ object TaggerApp extends App {
 		"Tencent is teaming up with Los Angeles-based education company Age of Learning to launch an English education program for kids in China. ABCmouse, Age of Learning’s flagship product, has been localized and will be available as a website and an iOS and Android app in China, with Tencent handling product development, marketing, sales and customer support.\nThe new partnership extends Tencent’s involvement in ed-tech, which already includes a strategic investment in VIPKID, an online video tutoring platform that connects Chinese kids with English teachers and competes with QKids and Dada ABC. ABCmouse, on the other hand, uses videos, books and online activities like games, songs and stories to help kids study English.\nThe Chinese version of ABCmouse includes integration with Tencent’s ubiquitous messenger and online services platform WeChat, which now has more than one billion users, and its instant messaging service QQ, with 783 million monthly active users. This makes it easier for parents to sign up and pay for ABCmouse, because they can use their WeChat or QQ account and payment information. It also allows families to share kids’ English-learning progress on their news feeds or in chats. For example, Jerry Chen, Age of Learning’s president of Greater China, says parents can send video or audio recordings of their children practicing English to grandparents, who can then buy gift subscriptions with one click.\nThough you probably haven’t heard of it unless you have young kids or work with elementary school-age children, Age of Learning has built a significant presence in online education since it was founded in 2007, thanks mainly to the popularity of ABCmouse in schools, public libraries and Head Start programs. Two years ago, Age of Learning hit unicorn status after raising $150 million at a $1 billion valuation from Iconiq Capital.\nThe partnership lets ABCmouse tap into a major new audience. Chen says there are more than 110 million kids between the ages of three to eight in China and the online English language learning market there is “a several billion dollar market that’s growing rapidly.” He points to a recent study by Chinese research agency Yiou Intelligence that says total spending on online English learning programs for children will be 29.41 billion RMB, or about $4.67 billion, this year, and is projected to reach 79.17 billion, or $12.6 billion, by 2022.\nThe localization of ABCmouse will extend to the design of its eponymous cartoon rodent, who has a more stylized appearance in China. Lessons include animations featuring an English teacher and students in an international school classroom and begin with listening comprehension and speaking before moving onto phonics, reading and writing. Tencent-Age of Learning products will also include speech recognition tools to help kids hone their English pronunciation.\nIn an email, Jason Chen, Tencent’s general manager of online education, said that the company “reviewed several companies through an extensive research process, and it became clear that ABCmouse had the most engaging and effective online English self-learning curriculum and content for children. Age of Learning puts learning first, and that commitment to educational excellence made them a perfect fit for our online English language learning business.”"
 	)
 
-	val tags = Tagger.tagArticle(artile)
+	val tags = tagger.tagArticle(artile)
 
 	if (tags.length > 0) {
 		println("Assigned some tags, need to send to REC-SYS")

@@ -1,5 +1,4 @@
 art
-artificial
 business
 comics
 creativity
@@ -33,7 +32,6 @@ literature
 marketing
 math
 media
-mental
 music
 neuroscience
 parenting

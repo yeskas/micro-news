@@ -1,10 +1,12 @@
 #!/usr/bin/env python
-import requests
 import json
+import pdb
+import requests
 
 
 # This script builds a json object mapping each tag to its related words
-print '{'
+tag_objects = []
+
 for line in open('all_tags.txt'):
 	# Add the tag itself
 	tag = line[:-1]
@@ -26,5 +28,10 @@ for line in open('all_tags.txt'):
 				'score': score
 			})
 
-	print '\t"%s": %s,' % (tag, json.dumps(links))
-print '}'
+	tag_objects.append({
+		"word": tag,
+		"links": links
+	})
+
+# Print so that it's semi-beautified
+print '[\n\t' + ',\n\t'.join(json.dumps(to) for to in tag_objects) + '\n]'
