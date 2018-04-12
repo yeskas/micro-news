@@ -129,7 +129,7 @@ object Tagger {
 
 
 //#main-class
-object AkkaQuickstart extends App {
+object TaggerApp extends App {
 	println("STARTING THE TAGGER")
 
 	val item = NewsItem(
