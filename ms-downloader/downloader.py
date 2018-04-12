@@ -1,16 +1,47 @@
-from xml.etree import ElementTree
-from lxml.html import HtmlElement as HE
-from pyquery import PyQuery as pq
-import pdb
 import json
+import pdb
+from pprint import pprint
+
+from pyquery import PyQuery
+
+
+NEWS_SOURCES = [
+	{
+		"name": "TechCrunch",
+		"link": "https://techcrunch.com",
+		"icon": "http://bocacommunications.com/wp-content/uploads/2017/07/TechCrunch-Logo.jpg",
+
+		"parsing_data": {
+			# Data about the page that contains the list of latest articles
+			"list": {
+				"url": "https://techcrunch.com",
+				"selectors": {
+					"article_link": "a.post-block__title__link"
+				}
+			},
+
+			# Data about the page that contains a single article
+			"article": {
+				"selectors": {
+					"title": ".article__title",
+					"body":  ".article-content",
+					"image": ".article__featured-image",
+				}
+			}
+		}
+	}
+]
 
 
 # Fetch the list of latest news based on the source-specific configs
-def download_news_links(news_source):
-	# 'd' acts like jquery's '$'
-	d = pq(url='https://techcrunch.com')
+def download_article_links(source):
+	url = source['parsing_data']['list']['url']
+	sel = source['parsing_data']['list']['selectors']
 
-	link_elems = d('a.post-block__title__link')
+	# 'pq' acts like jquery's '$'
+	pq = PyQuery(url=url)
+
+	link_elems = pq(sel['article_link'])
 	links = [elem.attrib['href'] for elem in link_elems]
 
 	return links
@@ -18,60 +49,47 @@ def download_news_links(news_source):
 
 # Download and parse the data of interest of a specific news item
 # based on the source-specific configs
-def download_news_item(news_source, link):
+def download_article(source, link):
 	print 'Downloading from %s' % link
 
-	# 'd' acts like jquery's '$'
-	d = pq(url=link)
+	# 'pq' acts like jquery's '$'
+	pq = PyQuery(url=link)
+	sel = source['parsing_data']['article']['selectors']
 
-	title = d('.article__title').text()
+	title = pq(sel['title']).text()
 
-	img_link_elems = d('.article__featured-image')
-	if len(img_link_elems) > 0:
-		img_link = img_link_elems[0].attrib['src']
+	body = pq('.article-content').text()
+	# body = pq('.article-content').text().encode('utf-8')
+
+	image_elems = pq(sel['image'])
+	if len(image_elems) > 0:
+		image = image_elems[0].attrib['src']
 	else:
-		img_link = ''
+		image = ''
 
-	body = d('.article-content').text()
-	# body = d('.article-content').text().encode('utf-8')
 
 	return {
 		'title': title,
-		'img_link': img_link,
-		'body': body
+		'body': body,
+		'image': image
 	}
 
 
-news_sources = ['techcrunch']
-for news_source in news_sources:
-	all_items = []
-
-	links = download_news_links(news_source)
+articles = []
+for source in NEWS_SOURCES:
+	links = download_article_links(source)
 	print links
 
 	# for link in links:
-	for link in links[:3]:
-		item = download_news_item(news_source, link)
-		item['link'] = link
+	for link in links:
+		article = download_article(source, link)
+		article['link'] = link
+		print 'Adding new article:'
+		pprint(article)
 
-		all_items.append(item)
-		print '\n\n' + '+' * 40
-		print item['link']
-		print '\n\n' + '+' * 40
-		print item['title']
-		print '\n\n' + '+' * 40
-		print item['img_link']
-		print '\n\n' + '+' * 40
-		print item['body']
-		print '\n\n' + '+' * 40
-
-		# break
+		articles.append(article)
 
 
 	# tmp dump to json
 	with open('news_items.json', 'w') as outfile:
-		json.dump({'news_items': all_items}, outfile)
-
-
-
-
+		json.dump({'news_items': articles}, outfile)
