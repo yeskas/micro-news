@@ -4,12 +4,17 @@ from pprint import pprint
 import re
 
 from pyquery import PyQuery
+import redis
 
+
+# Delete articles after 3 days
+ARTICLE_TTL = 3 * 24 * 60 * 60
 
 # TODO: put this into db
 NEWS_SOURCES = [
 	{
 		"name": "TechCrunch",
+		"code": "techcrunch",
 		"link": "https://techcrunch.com",
 		"icon": "https://techcrunch.com/wp-content/uploads/2015/02/cropped-cropped-favicon-gradient.png?w=192",
 
@@ -35,6 +40,7 @@ NEWS_SOURCES = [
 
 	{
 		"name": "BBC",
+		"code": "bbc",
 		"link": "http://bbc.com",
 		"icon": "https://ichef.bbci.co.uk/images/ic/192xn/p05hy0qr.jpg",
 
@@ -60,6 +66,7 @@ NEWS_SOURCES = [
 
 	{
 		"name": "Bloomberg",
+		"code": "bloomberg",
 		"link": "https://www.bloomberg.com",
 		"icon": "https://assets.bwbx.io/business/public/images/favicons/favicon-192x192-3621dae772.png",
 
@@ -85,6 +92,7 @@ NEWS_SOURCES = [
 
 	{
 		"name": "Sky Sports",
+		"code": "skysports",
 		"link": "http://www.skysports.com",
 		"icon": "http://www.sky.com/assets/masthead/images/sky-logo.png",
 
@@ -115,8 +123,6 @@ def download_article_links(source):
 	url = source['parsing_data']['list']['url']
 	sel = source['parsing_data']['list']['selectors']
 
-	print 'Downloading article list from %s' % url
-
 	# 'pq' acts like jquery's '$'
 	pq = PyQuery(url=url)
 
@@ -136,8 +142,6 @@ def download_article_links(source):
 
 # Download and parse single article, return None if cant parse
 def download_article(source, link):
-	print 'Downloading from %s' % link
-
 	# 'pq' acts like jquery's '$'
 	pq = PyQuery(url=link)
 	sel = source['parsing_data']['article']['selectors']
@@ -180,27 +184,29 @@ def download_article(source, link):
 
 
 if __name__ == '__main__':
-	articles = []
-	for source in NEWS_SOURCES:
-		print 'Updating news from %s' % source['name']
+	redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
+	for source in NEWS_SOURCES:
 		links = download_article_links(source)
-		print 'Fetched %d links:' % len(links)
+
+		print '\nFetched %d links for %s:' % (len(links), source['name'])
 		pprint(links)
-		print ''
 
 		for link in links:
+			redis_key = 'news:%s:%s' % (source['code'], link)
+
+			# Check if already downloaded
+			if redis_client.exists(redis_key):
+				print 'Ignoring: %s' % link
+				continue
+
 			article = download_article(source, link)
 			if article:
+				print 'Adding: %s' % link
 				article['link'] = link
-				print 'Adding: %s @ %s' % (article['title'], link)
-				articles.append(article)
-
-		# tmp dump to json
-		with open('news_items.json', 'w') as outfile:
-			json.dump({'news_items': articles}, outfile, indent=4)
-
-		print ''
+				redis_client.set(redis_key, json.dumps(article), ex=ARTICLE_TTL)
+			else:
+				print 'Unparseable: %s' % link
 
 
 
