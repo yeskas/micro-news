@@ -1,15 +1,17 @@
 import json
 import pdb
 from pprint import pprint
+import re
 
 from pyquery import PyQuery
 
 
+# TODO: put this into db
 NEWS_SOURCES = [
 	{
 		"name": "TechCrunch",
 		"link": "https://techcrunch.com",
-		"icon": "http://bocacommunications.com/wp-content/uploads/2017/07/TechCrunch-Logo.jpg",
+		"icon": "https://techcrunch.com/wp-content/uploads/2015/02/cropped-cropped-favicon-gradient.png?w=192",
 
 		"parsing_data": {
 			# Data about the page that contains the list of latest articles
@@ -29,6 +31,81 @@ NEWS_SOURCES = [
 				}
 			}
 		}
+	},
+
+	{
+		"name": "BBC",
+		"link": "http://bbc.com",
+		"icon": "https://ichef.bbci.co.uk/images/ic/192xn/p05hy0qr.jpg",
+
+		"parsing_data": {
+			# Data about the page that contains the list of latest articles
+			"list": {
+				"url": "http://www.bbc.com/news",
+				"selectors": {
+					"article_link": ".nw-c-most-read__items a.gs-c-promo-heading"
+				}
+			},
+
+			# Data about the page that contains a single article
+			"article": {
+				"selectors": {
+					"title": ".story-body__h1",
+					"body":  ".story-body__inner p",
+					"image": ".image-and-copyright-container img.js-image-replace",
+				}
+			}
+		}
+	},
+
+	{
+		"name": "Bloomberg",
+		"link": "https://www.bloomberg.com",
+		"icon": "https://assets.bwbx.io/business/public/images/favicons/favicon-192x192-3621dae772.png",
+
+		"parsing_data": {
+			# Data about the page that contains the list of latest articles
+			"list": {
+				"url": "https://www.bloomberg.com/markets",
+				"selectors": {
+					"article_link": "a.top-news-v3-story-headline__link"
+				}
+			},
+
+			# Data about the page that contains a single article
+			"article": {
+				"selectors": {
+					"title": ".lede-large-content__highlight, .lede-text-only__highlight",
+					"body":  ".fence-body p",
+					"image": ".bg-crop--1x-1 div.lede-large-image__image, .video-player__container",
+				}
+			}
+		}
+	},
+
+	{
+		"name": "Sky Sports",
+		"link": "http://www.skysports.com",
+		"icon": "http://www.sky.com/assets/masthead/images/sky-logo.png",
+
+		"parsing_data": {
+			# Data about the page that contains the list of latest articles
+			"list": {
+				"url": "http://www.skysports.com/news-wire",
+				"selectors": {
+					"article_link": "a.news-list__figure"
+				}
+			},
+
+			# Data about the page that contains a single article
+			"article": {
+				"selectors": {
+					"title": ".article__title",
+					"body":  ".article__body p",
+					"image": "img.widge-figure__image",
+				}
+			}
+		}
 	}
 ]
 
@@ -38,17 +115,26 @@ def download_article_links(source):
 	url = source['parsing_data']['list']['url']
 	sel = source['parsing_data']['list']['selectors']
 
+	print 'Downloading article list from %s' % url
+
 	# 'pq' acts like jquery's '$'
 	pq = PyQuery(url=url)
 
 	link_elems = pq(sel['article_link'])
-	links = [elem.attrib['href'] for elem in link_elems]
+	links = []
+	for link_elem in link_elems:
+		link = link_elem.attrib['href']
+
+		# relative url
+		if link.startswith('/'):
+			link = source['link'] + link
+
+		links.append(link)
 
 	return links
 
 
-# Download and parse the data of interest of a specific news item
-# based on the source-specific configs
+# Download and parse single article, return None if cant parse
 def download_article(source, link):
 	print 'Downloading from %s' % link
 
@@ -57,39 +143,65 @@ def download_article(source, link):
 	sel = source['parsing_data']['article']['selectors']
 
 	title = pq(sel['title']).text()
+	body = pq(sel['body']).text()
 
-	body = pq('.article-content').text()
-	# body = pq('.article-content').text().encode('utf-8')
+	image = ''
 
+	# try all known ways to extract image
 	image_elems = pq(sel['image'])
-	if len(image_elems) > 0:
-		image = image_elems[0].attrib['src']
+	for image_elem in image_elems:
+		if image_elem.tag == 'img':
+			# regular img tag
+			image = image_elem.get('src') or image_elem.get('data-src')
+
+		else:
+			# part of background-image style
+			style = image_elem.get('style', '')
+			match = re.search('background-image: url(.*)', style, re.IGNORECASE)
+			if match:
+				image = match.group(1)[2:-2]
+
+			# part of a video player poster
+			else:
+				image = image_elem.get('data-poster', '')
+
+		if image != '':
+			break
+
+	# Don't return if failed to parse any part
+	if (title and body and image):
+		return {
+			'title': title,
+			'body': body,
+			'image': image
+		}
 	else:
-		image = ''
+		return None
 
 
-	return {
-		'title': title,
-		'body': body,
-		'image': image
-	}
+if __name__ == '__main__':
+	articles = []
+	for source in NEWS_SOURCES:
+		print 'Updating news from %s' % source['name']
+
+		links = download_article_links(source)
+		print 'Fetched %d links:' % len(links)
+		pprint(links)
+		print ''
+
+		for link in links:
+			article = download_article(source, link)
+			if article:
+				article['link'] = link
+				print 'Adding: %s @ %s' % (article['title'], link)
+				articles.append(article)
+
+		# tmp dump to json
+		with open('news_items.json', 'w') as outfile:
+			json.dump({'news_items': articles}, outfile, indent=4)
+
+		print ''
 
 
-articles = []
-for source in NEWS_SOURCES:
-	links = download_article_links(source)
-	print links
-
-	# for link in links:
-	for link in links:
-		article = download_article(source, link)
-		article['link'] = link
-		print 'Adding new article:'
-		pprint(article)
-
-		articles.append(article)
 
 
-	# tmp dump to json
-	with open('news_items.json', 'w') as outfile:
-		json.dump({'news_items': articles}, outfile)
