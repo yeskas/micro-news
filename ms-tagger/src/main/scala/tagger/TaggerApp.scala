@@ -1,11 +1,8 @@
-//#full-example
 package tagger
 
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-
-import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }
 
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -13,69 +10,14 @@ import org.json4s.jackson.JsonMethods._
 import com.rabbitmq.client.{ConnectionFactory, DefaultConsumer, Envelope, AMQP}
 
 
-//#greeter-companion
-//#greeter-messages
-object Greeter {
-	//#greeter-messages
-	def props(message: String, printerActor: ActorRef): Props = Props(new Greeter(message, printerActor))
-	//#greeter-messages
-	final case class WhoToGreet(who: String)
-	case object Greet
-}
-//#greeter-messages
-//#greeter-companion
-
-
-//#greeter-actor
-class Greeter(message: String, printerActor: ActorRef) extends Actor {
-	import Greeter._
-	import Printer._
-
-	var greeting = ""
-
-	def receive = {
-		case WhoToGreet(who) =>
-			greeting = s"$message, $who"
-		case Greet					 =>
-			//#greeter-send-message
-			printerActor ! Greeting(greeting)
-		//#greeter-send-message
-	}
-}
-//#greeter-actor
-
-
-//#printer-companion
-//#printer-messages
-object Printer {
-	//#printer-messages
-	def props: Props = Props[Printer]
-	//#printer-messages
-	final case class Greeting(greeting: String)
-}
-//#printer-messages
-//#printer-companion
-
-
-//#printer-actor
-class Printer extends Actor with ActorLogging {
-	import Printer._
-
-	def receive = {
-		case Greeting(greeting) =>
-			log.info(s"Greeting received (from ${sender()}): $greeting")
-	}
-}
-//#printer-actor
-
-
 case class Article(title: String, body: String)
 
-// Info on words related to tag words
+// Classes to represent words related to tag words
 case class Link(word: String, score: Double)
 case class Tag(word: String, links: List[Link])
 
 
+// Assigns tags to articles based on a specified config file
 class Tagger(tagsFilePath: String) {
 	private val allTags = parseTags()
 
@@ -129,7 +71,6 @@ class Tagger(tagsFilePath: String) {
 }
 
 
-//#main-class
 object TaggerApp {
 	private val TASK_QUEUE_NAME = "downloader:tagger:articles"
 
@@ -179,39 +120,4 @@ object TaggerApp {
 		// Block for new messages
 		channel.basicConsume(TASK_QUEUE_NAME, false, consumer)
 	}
-
-
-	//	import Greeter._
-	//
-	//	// Create the 'helloAkka' actor system
-	//	val system: ActorSystem = ActorSystem("helloAkka")
-	//
-	//	//#create-actors
-	//	// Create the printer actor
-	//	val printer: ActorRef = system.actorOf(Printer.props, "printerActor")
-	//
-	//	// Create the 'greeter' actors
-	//	val howdyGreeter: ActorRef =
-	//		system.actorOf(Greeter.props("Howdy", printer), "howdyGreeter")
-	//	val helloGreeter: ActorRef =
-	//		system.actorOf(Greeter.props("Hello", printer), "helloGreeter")
-	//	val goodDayGreeter: ActorRef =
-	//		system.actorOf(Greeter.props("Good day", printer), "goodDayGreeter")
-	//	//#create-actors
-	//
-	//	//#main-send-messages
-	//	howdyGreeter ! WhoToGreet("Akka")
-	//	howdyGreeter ! Greet
-	//
-	//	howdyGreeter ! WhoToGreet("Lightbend")
-	//	howdyGreeter ! Greet
-	//
-	//	helloGreeter ! WhoToGreet("Scala")
-	//	helloGreeter ! Greet
-	//
-	//	goodDayGreeter ! WhoToGreet("Play")
-	//	goodDayGreeter ! Greet
-	//	//#main-send-messages
 }
-//#main-class
-//#full-example
