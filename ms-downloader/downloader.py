@@ -100,7 +100,7 @@ if __name__ == '__main__':
 		source = json.loads(redis_client.get(source_key))
 		links = download_article_links(source)
 
-		print 'Fetched %d links for %s:' % (len(links), source['name'])
+		print 'Fetched %d links from %s:' % (len(links), source['name'])
 		pprint(links)
 
 		for link in links:
@@ -129,6 +129,7 @@ if __name__ == '__main__':
 					)
 				)
 				print '\t\tsent to tagger'
+
 
 			else:
 				print '\tUnparseable: %s' % link
