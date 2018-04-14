@@ -7,7 +7,7 @@ from flask import request
 from flask import Response
 from flask import session
 
-from config import http_addr
+from config import http_addr, amqp_addr
 
 
 app = Flask(__name__)

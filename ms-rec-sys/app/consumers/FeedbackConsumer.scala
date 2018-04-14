@@ -18,7 +18,7 @@ class FeedbackConsumerModule extends SimpleModule(bind[FeedbackConsumer].toSelf.
 class FeedbackConsumer @Inject() (actorSystem: ActorSystem) (implicit executionContext: ExecutionContext) {
 
 	// Make it start @ app start
-	actorSystem.scheduler.schedule(initialDelay = 1000.seconds, interval = 2.seconds) {
+	actorSystem.scheduler.schedule(initialDelay = 100.seconds, interval = 100.days) {
 		println("This is FEEDBACK CONSUMER")
 	}
 

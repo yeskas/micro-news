@@ -25,4 +25,10 @@ $(document).ready(function(){
 			}
 		});
 	});
+
+	// Capture the action & simulate clicking the link
+	$(".news-item-title").click(function() {
+		console.log("news link clicked!");
+		$(this).parent().find('a.news-item-link').get(0).click();
+	})
 });

@@ -29,13 +29,9 @@ body {
 	background-color: white;
 }
 
-/* Remove default styles for a tag */
-.news-item-wrapper a:link,
-.news-item-wrapper a:visited,
-.news-item-wrapper a:hover,
-.news-item-wrapper a:active {
-	color: black;
-	text-decoration: none;
+/* Don't show links to articles */
+a.news-item-link {
+	display: none;
 }
 
 .news-item-image {
@@ -45,8 +41,17 @@ body {
 	height: 120px;
 }
 
+.news-item-title {
+	cursor: pointer;
+}
+
 .news-item-source {
 	color: #181818;
+}
+
+.news-item-source a {
+	color: black;
+	text-decoration: none;
 }
 
 .news-item-source-icon {
