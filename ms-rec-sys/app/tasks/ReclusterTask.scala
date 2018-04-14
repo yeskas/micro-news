@@ -7,11 +7,15 @@ import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import scala.math.{sqrt, Ordering}
 
+import play.api.inject.{SimpleModule, _}
+
 import akka.actor.ActorSystem
 import javax.inject.Inject
 
 import com.datastax.driver.core.{Cluster, ResultSet, Row}
 
+
+class ReclusterTaskModule extends SimpleModule(bind[ReclusterTask].toSelf.eagerly())
 
 class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionContext: ExecutionContext) {
 
