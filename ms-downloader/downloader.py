@@ -1,3 +1,4 @@
+import copy
 import json
 import pdb
 from pprint import pprint
@@ -100,6 +101,10 @@ if __name__ == '__main__':
 		source = json.loads(redis_client.get(source_key))
 		links = download_article_links(source)
 
+		# additional 'source' field to add to articles w/o the parsing info
+		source_clone = copy.deepcopy(source)
+		source_clone.pop('parsing_data', None)
+
 		print 'Fetched %d links from %s:' % (len(links), source['name'])
 		pprint(links)
 
@@ -115,6 +120,7 @@ if __name__ == '__main__':
 			if article:
 				print '\tAdding: %s' % link
 				article['link'] = link
+				article['source'] = source_clone
 				article_json = json.dumps(article)
 
 				redis_client.set(redis_key, article_json, ex=ARTICLE_TTL)

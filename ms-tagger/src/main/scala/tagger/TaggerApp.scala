@@ -3,18 +3,20 @@ package tagger
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-
 import org.json4s._
+import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
+import com.rabbitmq.client.{AMQP, ConnectionFactory, DefaultConsumer, Envelope, MessageProperties}
 
-import com.rabbitmq.client.{ConnectionFactory, DefaultConsumer, Envelope, AMQP}
-
-
-case class Article(title: String, body: String)
 
 // Classes to represent words related to tag words
 case class Link(word: String, score: Double)
 case class Tag(word: String, links: List[Link])
+
+
+// Classes to represent incoming article jsons
+case class ArticleSource(name: String, link: String, icon: String)
+case class Article(link: String, title: String, body: String, image: String, source: ArticleSource)
 
 
 // Assigns tags to articles based on a specified config file
@@ -72,7 +74,9 @@ class Tagger(tagsFilePath: String) {
 
 
 object TaggerApp {
-	private val TASK_QUEUE_NAME = "downloader:tagger:articles"
+	private val IN_TASK_QUEUE_NAME = "downloader:tagger:articles"
+
+	private val OUT_TASK_QUEUE_NAME = "tagger:rec-sys:articles"
 
 	def main(argv: Array[String]): Unit = {
 		println("STARTING THE TAGGER")
@@ -80,11 +84,12 @@ object TaggerApp {
 		val tagger = new Tagger("util/tags.json")
 
 		// Initialize RabbitMQ connection
+		// TODO: initialize from config
 		val factory = new ConnectionFactory()
 		factory.setHost("localhost")
 		val connection = factory.newConnection()
 		val channel = connection.createChannel()
-		channel.queueDeclare(TASK_QUEUE_NAME, true, false, false, null)
+		channel.queueDeclare(IN_TASK_QUEUE_NAME, true, false, false, null)
 		channel.basicQos(1)
 
 		println("Waiting for messages...")
@@ -108,6 +113,37 @@ object TaggerApp {
 					println("Assigned some tags, need to send to REC-SYS:")
 					println(tags.mkString(", "))
 
+					// Send tagged article to REC-SYS
+					val outConnection = factory.newConnection
+					val outChannel = connection.createChannel
+
+					outChannel.queueDeclare(OUT_TASK_QUEUE_NAME, true, false, false, null)
+
+					// Dump as json
+					val outMessage = compact(render(
+						("link" -> article.link) ~
+						("title" -> article.title) ~
+						("body" -> article.body) ~
+						("image" -> article.image) ~
+						("source" ->
+							("name" -> article.source.name) ~
+							("link" -> article.source.link) ~
+							("icon" -> article.source.icon)
+						) ~
+						("tags" -> tags.toList)
+					))
+
+					channel.basicPublish(
+						"",
+						OUT_TASK_QUEUE_NAME,
+						MessageProperties.PERSISTENT_TEXT_PLAIN,
+						outMessage.getBytes("UTF-8")
+					)
+
+					outChannel.close()
+					outConnection.close()
+					println("Tagged & sent to REC-SYS: " + outMessage)
+
 				} else {
 					println("Wasn't able to assign any tags, IGNORING this article")
 				}
@@ -118,6 +154,6 @@ object TaggerApp {
 		}
 
 		// Block for new messages
-		channel.basicConsume(TASK_QUEUE_NAME, false, consumer)
+		channel.basicConsume(IN_TASK_QUEUE_NAME, false, consumer)
 	}
 }
