@@ -20,3 +20,9 @@ libraryDependencies += "javax.xml.bind" % "jaxb-api" % "2.1"
 
 // Cassandra client
 libraryDependencies += "com.datastax.cassandra" % "cassandra-driver-core" % "3.4.0"
+
+// Parsing JSON
+libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.5.3"
+
+// Java Client for RabbitMQ
+libraryDependencies += "com.rabbitmq" % "amqp-client" % "5.2.0"

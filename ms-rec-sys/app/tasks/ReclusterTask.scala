@@ -266,7 +266,7 @@ class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionCont
 	}
 
 	// Schedule the task to recluster users, and assign the news per cluster
-	actorSystem.scheduler.schedule(initialDelay = 1.second, interval = 1.hour) {
+	actorSystem.scheduler.schedule(initialDelay = 1000.seconds, interval = 1.hour) {
 		println("--- Starting the Recluster task ---")
 
 		// 1. pull all user_tags into memory

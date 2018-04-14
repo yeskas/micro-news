@@ -114,6 +114,7 @@ object TaggerApp {
 					println(tags.mkString(", "))
 
 					// Send tagged article to REC-SYS
+					// TODO: reuse existing connection
 					val outConnection = factory.newConnection
 					val outChannel = connection.createChannel
 
