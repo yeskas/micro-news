@@ -45,8 +45,7 @@ class RecommendationController @Inject()(cc: ControllerComponents) extends Abstr
 			// First, read user's cluster; cluster 0 is the default;
 			var rs = session.execute(s"SELECT cluster_id FROM test01.users WHERE id = $userId")
 			var row = rs.one()
-			// TODO: change back to cluster #0
-			val clusterId = if (row == null) 1 else row.getInt("cluster_id");
+			val clusterId = if (row == null) 0 else row.getInt("cluster_id");
 
 			// Next, read best-matching articles of this cluster
 			rs = session.execute(s"SELECT articles_json FROM test01.clusters WHERE id = $clusterId")

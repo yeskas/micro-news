@@ -18,7 +18,7 @@ import org.json4s.jackson.JsonMethods._
 
 
 // Fields of interest in the incoming article jsons
-case class Article(tags: List[String])
+case class Article(id: Int, tags: List[String])
 
 
 class ArticleConsumerModule extends SimpleModule(bind[ArticleConsumer].toSelf.eagerly())
@@ -36,21 +36,10 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 
 		val session = cluster.connect()
 
-		// TODO: don't do this; store in a config table instead; or get during insert;
-		def getNextArticleId() : Int = {
-			val rs = session.execute("SELECT MAX(id) as max_id FROM test01.articles")
-			val row = rs.one()
-
-			row.getInt("max_id") + 1
-		}
-
-		def insertArticle(articleJson: String, articleTags: List[String]) : Unit = {
-			val newId = getNextArticleId()
-
-			// TODO: rename to article_json
+		def insertArticle(id: Int, articleTags: List[String], articleJson: String) : Unit = {
 			session.execute("" +
-				s"INSERT INTO test01.articles (id, body_json) " +
-				s"VALUES ($newId, '$articleJson')"
+				s"INSERT INTO test01.articles (id, article_json) " +
+				s"VALUES ($id, '$articleJson')"
 			)
 
 			val tags_csv = articleTags.mkString(", ")
@@ -58,7 +47,7 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 
 			session.execute("" +
 				s"INSERT INTO test01.article_tags (id, ${tags_csv}) " +
-				s"VALUES ($newId, ${vals_csv})"
+				s"VALUES ($id, ${vals_csv})"
 			)
 		}
 
@@ -84,15 +73,15 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 		val consumer = new DefaultConsumer(channel) {
 			override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties,
 			                            body: Array[Byte]): Unit = {
-				val message = new String(body, "UTF-8")
-				println("Received message: " + message)
+				val articleJson = new String(body, "UTF-8")
+				println("Received message: " + articleJson)
 
 				// Parse out the article object
 				implicit val formats = DefaultFormats
-				val json = parse(message)
+				val json = parse(articleJson)
 				val article = json.extract[Article]
 
-				CassandraClient.insertArticle(message, article.tags)
+				CassandraClient.insertArticle(article.id, article.tags, articleJson)
 
 				println("Done with message\n\n\n")
 				channel.basicAck(envelope.getDeliveryTag, false)
