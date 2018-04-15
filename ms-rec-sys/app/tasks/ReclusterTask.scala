@@ -92,6 +92,7 @@ class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionCont
 
 			val idToArticleJson = mutable.Map[Int, String]()
 			for (row <- rows.asScala) {
+				// TODO: add article id to the body json here or in the caller
 				idToArticleJson(row.getInt("id")) = row.getString("body_json")
 			}
 

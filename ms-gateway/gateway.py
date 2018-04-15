@@ -48,6 +48,9 @@ def index():
 		params={'userId': session['user_id']}
 	).json()
 
+	for item in items:
+		item['id'] = 155
+
 	return render_template('news.html', user=user, items=items)
 
 
