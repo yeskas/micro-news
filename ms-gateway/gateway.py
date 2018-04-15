@@ -10,6 +10,31 @@ from flask import session
 from config import http_addr, amqp_addr
 
 
+# Extract the subtitle sentence of article's body
+def extract_subtitle(article_body):
+	# Limit to 200 chars
+	body = article_body[:200]
+
+	# First sentence on same line
+	dot_idx = body.find('. ')
+	if dot_idx >= 0:
+		return body[:(dot_idx + 1)]
+
+	# First sentence on different line
+	nl_idx = body.find('.\n')
+	if nl_idx >= 0:
+		return body[:(nl_idx + 1)]
+
+	# Cut at last space
+	space_idx = body.rfind(' ')
+	if space_idx >= 0:
+		# cut at last space
+		return body[:(space_idx + 1)] + '...'
+
+	# Cut at last char
+	return body + '...'
+
+
 app = Flask(__name__)
 
 # Encrypt sessions with this
@@ -48,8 +73,11 @@ def index():
 		params={'userId': session['user_id']}
 	).json()
 
+	# Change format for the view
 	for item in items:
-		item['id'] = 155
+		body = item.pop('body', '')
+		if 'subtitle' not in item:
+			item['subtitle'] = extract_subtitle(body)
 
 	return render_template('news.html', user=user, items=items)
 
