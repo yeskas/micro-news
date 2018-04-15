@@ -1,19 +1,15 @@
 import copy
+import datetime
 import json
 import pdb
 from pprint import pprint
 import re
-
 
 import pika
 from pyquery import PyQuery
 import redis
 
 from config import rabbitmq_settings, service_registry
-
-
-# Delete articles after 3 days
-ARTICLE_TTL = 3 * 24 * 60 * 60
 
 
 # Fetch the list of latest news based on the source-specific configs
@@ -81,8 +77,50 @@ def download_article(source, link):
 		return None
 
 
+class RedisClient(object):
+	# Delete articles after 3 days
+	ARTICLE_TTL = 3 * 24 * 60 * 60
+
+	def __init__(self, host='localhost', port=6379, db=0):
+		self.client = redis.StrictRedis(host=host, port=port, db=db)
+
+	def get_all_sources(self):
+		sources = []
+
+		for source_key in self.client.scan_iter('src:*'):
+			source = json.loads(self.client.get(source_key))
+			sources.append(source)
+
+		return sources
+
+	def has_article(self, link):
+		key_by_link = 'news:by_link:%s' % link
+		return self.client.exists(key_by_link)
+
+	def add_article(self, article):
+		# assign id
+		next_id = int(self.client.get('news:next_id'))
+		self.client.incr('news:next_id')
+		article['id'] = next_id
+
+		# add to query full article by id
+		key_by_id = 'news:by_id:%s' % next_id
+		article_json = json.dumps(article)
+		self.client.set(key_by_id, article_json, ex=self.ARTICLE_TTL)
+
+		# add to query presense by link
+		key_by_link = 'news:by_link:%s' % article['link']
+		self.client.set(key_by_link, 1, ex=self.ARTICLE_TTL)
+
+		return next_id
+
+	def get_article(self, _id):
+		key_by_id = 'news:by_id:%s' % _id
+		return self.client.get(key_by_id)
+
+
 if __name__ == '__main__':
-	redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+	db = RedisClient()
 	# TODO: move into separate class
 	queue_conn = pika.BlockingConnection(
 		pika.ConnectionParameters(
@@ -96,49 +134,46 @@ if __name__ == '__main__':
 		durable=True
 	)
 
-
-	for source_key in redis_client.scan_iter("src:*"):
-		source = json.loads(redis_client.get(source_key))
+	for source in db.get_all_sources():
 		links = download_article_links(source)
+
+		print 'Fetched %d links from %s:' % (len(links), source['name'])
+		pprint(links)
 
 		# additional 'source' field to add to articles w/o the parsing info
 		source_clone = copy.deepcopy(source)
 		source_clone.pop('parsing_data', None)
 
-		print 'Fetched %d links from %s:' % (len(links), source['name'])
-		pprint(links)
-
 		for link in links:
-			redis_key = 'news:%s:%s' % (source['code'], link)
-
 			# Check if already downloaded
-			if redis_client.exists(redis_key):
-				print '\tIgnoring: %s' % link
+			if db.has_article(link):
+				print 'Ignoring: %s' % link
 				continue
 
 			article = download_article(source, link)
 			if article:
-				print '\tAdding: %s' % link
+				print 'Adding: %s' % link
 				article['link'] = link
 				article['source'] = source_clone
-				article_json = json.dumps(article)
+				article['timestamp'] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
-				redis_client.set(redis_key, article_json, ex=ARTICLE_TTL)
-				print '\t\tsaved to db'
+				_id = db.add_article(article)
+				article['id'] = _id
+				print 'Saved to db'
 
 				channel.basic_publish(
 					exchange='',
 					routing_key=service_registry['ms-tagger']['amqp']['queue'],
-					body=article_json,
+					body=json.dumps(article),
 					properties=pika.BasicProperties(
 						delivery_mode = 2, # make message persistent
 					)
 				)
-				print '\t\tsent to tagger'
+				print 'Sent to tagger'
 
 
 			else:
-				print '\tUnparseable: %s' % link
+				print 'Unparseable: %s' % link
 
 	queue_conn.close()
 

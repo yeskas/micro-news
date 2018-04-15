@@ -112,14 +112,14 @@ INIT_NEWS_SOURCES = [
 ]
 
 
-# Run this only once to initialize the news sources in the db
+# Run this only once to initialize the news ids & sources in the db
 if __name__ == '__main__':
 	redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+	redis_client.set('news:next_id', 0)
 
 	for source in INIT_NEWS_SOURCES:
 		redis_key = 'src:%s' % source['code']
 		redis_client.set(redis_key, json.dumps(source))
-
-
 
 
