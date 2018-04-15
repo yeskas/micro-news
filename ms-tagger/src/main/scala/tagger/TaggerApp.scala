@@ -16,7 +16,8 @@ case class Tag(word: String, links: List[Link])
 
 // Classes to represent incoming article jsons
 case class ArticleSource(name: String, link: String, icon: String)
-case class Article(link: String, title: String, body: String, image: String, source: ArticleSource)
+case class Article(id: Int, link: String, title: String, body: String, image: String, timestamp: String,
+                   source: ArticleSource)
 
 
 // Assigns tags to articles based on a specified config file
@@ -122,10 +123,12 @@ object TaggerApp {
 
 					// Dump as json
 					val outMessage = compact(render(
+						("id" -> article.id) ~
 						("link" -> article.link) ~
 						("title" -> article.title) ~
 						("body" -> article.body) ~
 						("image" -> article.image) ~
+						("timestamp" -> article.timestamp) ~
 						("source" ->
 							("name" -> article.source.name) ~
 							("link" -> article.source.link) ~
