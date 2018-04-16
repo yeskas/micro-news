@@ -77,10 +77,8 @@ class FeedbackConsumer @Inject() (actorSystem: ActorSystem) (implicit executionC
 			// Write updated user tags to db
 			val setStatements = mutable.ArrayBuffer[String]()
 			for ((tag, articleWeight) <- tagToArticleWeight) {
-				var userWeight
-				if (row.isNull(tag)) {
-					userWeight = 0
-				} else {
+				var userWeight = 0
+				if (!row.isNull(tag)) {
 					userWeight = row.getInt(tag)
 				}
 

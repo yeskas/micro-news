@@ -37,15 +37,13 @@ insert into article_tags(id, javascript, literature) values (6, 0, 1);
 
 
 -- Default cluster that just has the latest news
-insert into clusters(id, articles_json) values (0, '
-    [
+insert into clusters(id, articles_json) values (0, '[
         {"id":1,"timestamp":"2018-04-15 20:03:36","link":"http://www.bbc.com/sport/golf/43634645","image":"https://ichef.bbci.co.uk/onesport/cps/800/cpsprodpb/01E8/production/_100688400_tiger_reuters.jpg","subtitle":"News about JS # 1","source":{"link":"https://techcrunch.com","name":"TechCrunch","icon":"http://bocacommunications.com/wp-content/uploads/2017/07/TechCrunch-Logo.jpg"},"title":"Masters: Tiger Woods, Rory McIlroy, Justin Rose tee times announced"},
         {"id":2,"timestamp":"2018-04-15 20:03:36","link":"http://www.bbc.com/sport/cricket/43624239","image":"https://ichef.bbci.co.uk/onesport/cps/800/cpsprodpb/12DF0/production/_100669277_englandfield_getty.jpg","subtitle":"New Zealand held their nerve to secure a dramatic draw against England in the second Test in Christchurch and claim a 1-0 series victory.","source":{"link":"http://bbc.com","name":"BBC","icon":"http://icons.iconarchive.com/icons/martz90/circle/512/bbc-news-icon.png"},"title":"News about JS # 2"},
         {"id":3,"timestamp":"2018-04-15 20:03:36","link":"http://www.bbc.com/sport/tennis/43613957","image":"https://ichef.bbci.co.uk/onesport/cps/800/cpsprodpb/17ABB/production/_100655969_isner_reuters.jpg","subtitle":"American John Isner won his first ever Masters 1,000 title with a 6-7 (4-7) 6-4 6-4 victory over German Alexander Zverev in the Miami Open final.","source":{"link":"https://techcrunch.com","name":"TechCrunch","icon":"http://bocacommunications.com/wp-content/uploads/2017/07/TechCrunch-Logo.jpg"},"title":"News about JS # 3"},
         {"id":4,"timestamp":"2018-04-15 20:03:36","link":"http://www.bbc.com/sport/golf/43634645","image":"https://ichef.bbci.co.uk/onesport/cps/800/cpsprodpb/01E8/production/_100688400_tiger_reuters.jpg","subtitle":"Four-time winner Tiger Woods will be among the early starters when the Masters at Augusta begins on Thursday.","source":{"link":"https://techcrunch.com","name":"TechCrunch","icon":"http://bocacommunications.com/wp-content/uploads/2017/07/TechCrunch-Logo.jpg"},"title":"News about Literature #4"},
         {"id":5,"timestamp":"2018-04-15 20:03:36","link":"http://www.bbc.com/sport/cricket/43624239","image":"https://ichef.bbci.co.uk/onesport/cps/800/cpsprodpb/12DF0/production/_100669277_englandfield_getty.jpg","subtitle":"New Zealand held their nerve to secure a dramatic draw against England in the second Test in Christchurch and claim a 1-0 series victory.","source":{"link":"http://bbc.com","name":"BBC","icon":"http://icons.iconarchive.com/icons/martz90/circle/512/bbc-news-icon.png"},"title":"News about Literature #5"},
         {"id":6,"timestamp":"2018-04-15 20:03:36","link":"http://www.bbc.com/sport/tennis/43613957","image":"https://ichef.bbci.co.uk/onesport/cps/800/cpsprodpb/17ABB/production/_100655969_isner_reuters.jpg","subtitle":"American John Isner won his first ever Masters 1,000 title with a 6-7 (4-7) 6-4 6-4 victory over German Alexander Zverev in the Miami Open final.","source":{"link":"https://techcrunch.com","name":"TechCrunch","icon":"http://bocacommunications.com/wp-content/uploads/2017/07/TechCrunch-Logo.jpg"},"title":"News about Literature #6"}
-    ]
-');
+    ]');
 
 insert into cluster_tags(id, javascript, literature) values (0, 0.5, 0.5);

@@ -49,6 +49,18 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 				s"INSERT INTO test01.article_tags (id, ${tags_csv}) " +
 				s"VALUES ($id, ${vals_csv})"
 			)
+
+			// Prepend to the default cluster
+			// TODO: improve code; add to other best-matching clusters
+			val rs = session.execute(s"SELECT * FROM test01.clusters where id = 0")
+			val row = rs.one()
+			val oldJson = row.getString("articles_json")
+			val newJson = "[" + articleJson + ", " + oldJson.substring(1)
+			session.execute("" +
+				s"UPDATE test01.clusters " +
+				s"SET articles_json = '$newJson'" +
+				s"WHERE id = 0"
+			)
 		}
 
 	}
