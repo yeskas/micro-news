@@ -111,7 +111,7 @@ class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionCont
 		def insertCluster(newId: Int, articlesJson: String, tags: Vec) : Unit = {
 			session.execute("" +
 				s"INSERT INTO test01.clusters (id, articles_json) " +
-				s"VALUES ($newId, '$articlesJson')"
+				s"VALUES ($newId, $$$$$articlesJson$$$$)"
 			)
 
 			// TODO: unhardcode tag names

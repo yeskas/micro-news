@@ -37,9 +37,10 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 		val session = cluster.connect()
 
 		def addArticle(id: Int, articleTags: List[String], articleJson: String) : Unit = {
+			// got cash?
 			session.execute("" +
 				s"INSERT INTO test01.articles (id, article_json) " +
-				s"VALUES ($id, '$articleJson')"
+				s"VALUES ($id, $$$$$articleJson$$$$)"
 			)
 
 			val tags_csv = articleTags.mkString(", ")
@@ -58,7 +59,7 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 			val newJson = "[" + articleJson + ", " + oldJson.substring(1)
 			session.execute("" +
 				s"UPDATE test01.clusters " +
-				s"SET articles_json = '$newJson'" +
+				s"SET articles_json = $$$$$newJson$$$$" +
 				s"WHERE id = 0"
 			)
 		}
