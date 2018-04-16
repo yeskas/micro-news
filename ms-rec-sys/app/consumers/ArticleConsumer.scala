@@ -36,7 +36,7 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 
 		val session = cluster.connect()
 
-		def insertArticle(id: Int, articleTags: List[String], articleJson: String) : Unit = {
+		def addArticle(id: Int, articleTags: List[String], articleJson: String) : Unit = {
 			session.execute("" +
 				s"INSERT INTO test01.articles (id, article_json) " +
 				s"VALUES ($id, '$articleJson')"
@@ -81,7 +81,7 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 				val json = parse(articleJson)
 				val article = json.extract[Article]
 
-				CassandraClient.insertArticle(article.id, article.tags, articleJson)
+				CassandraClient.addArticle(article.id, article.tags, articleJson)
 
 				println("Done with message\n\n\n")
 				channel.basicAck(envelope.getDeliveryTag, false)

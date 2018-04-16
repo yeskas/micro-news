@@ -29,6 +29,15 @@ $(document).ready(function(){
 	// Capture the action & simulate clicking the link
 	$(".news-item-title").click(function() {
 		var articleId = $(this).data('article-id');
+		$.ajax({
+			type: "POST",
+			url: "/item_clicked",
+			data: {
+				article_id: articleId
+			},
+			async: true
+		})
+
 		$(this).parent().find('a.news-item-link').get(0).click();
 	});
 });
