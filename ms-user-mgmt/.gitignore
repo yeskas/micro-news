@@ -22,4 +22,8 @@
 hs_err_pid*
 
 # IntelliJ files
-.idea
+.idea/
+ms-user-mgmt.iml
+
+# Spring builds
+target/
