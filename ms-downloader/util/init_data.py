@@ -116,10 +116,10 @@ INIT_NEWS_SOURCES = [
 if __name__ == '__main__':
 	redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
-	redis_client.set('news:next_id', 7)
+	redis_client.set('news:next_id', 0, nx=True)
 
 	for source in INIT_NEWS_SOURCES:
 		redis_key = 'src:%s' % source['code']
-		redis_client.set(redis_key, json.dumps(source))
+		redis_client.set(redis_key, json.dumps(source), nx=True)
 
 
