@@ -36,6 +36,8 @@ class Tagger(tagsFilePath: String) {
 		json.extract[List[Tag]]
 	}
 
+	// Scores each tag based on how often its linked-words occur * the weight of the linked word
+	// Returns tags that score the most
 	def tagArticle(article: Article): Array[String] = {
 		// parse out all words & count occurrences
 		val wordRegex = "(\\w+)".r
@@ -46,8 +48,7 @@ class Tagger(tagsFilePath: String) {
 		val allWords = titleWords ++ bodyWords
 		val wordToOccurrences = allWords.groupBy(word=>word).mapValues(_.size)
 
-		// score each potential tag, based on # of occurrences and it's relevance
-		// i.e. scalar multiplication of occurrences-vector & scores-vector
+		// score for tag = scalar multiplication (linked-words-occurrences-vector) * (linked-words-weights)
 		val tagScores = new ArrayBuffer[(String, Double)]()
 		for (tag <- allTags) {
 			var score = 0.0
