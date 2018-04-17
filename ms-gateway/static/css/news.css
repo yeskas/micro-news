@@ -55,8 +55,9 @@ a.news-item-link {
 }
 
 .news-item-source-icon {
+	border-radius: 1px;
 	object-fit: cover;
-	width: 20px;
+	max-width: 30px;
 	height: 20px;
 }
 

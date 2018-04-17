@@ -93,7 +93,7 @@ INIT_NEWS_SOURCES = [
 		"parsing_data": {
 			# Data about the page that contains the list of latest articles
 			"list": {
-				"url": "http://www.skysports.com/news-wire",
+				"url": "http://www.skysports.com/features",
 				"selectors": {
 					"article_link": "a.news-list__figure"
 				}
@@ -116,7 +116,7 @@ INIT_NEWS_SOURCES = [
 if __name__ == '__main__':
 	redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
-	redis_client.set('news:next_id', 0)
+	redis_client.set('news:next_id', 7)
 
 	for source in INIT_NEWS_SOURCES:
 		redis_key = 'src:%s' % source['code']
