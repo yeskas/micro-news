@@ -7,7 +7,7 @@ import requests
 # This script builds a json object mapping each tag to its related words
 tag_objects = []
 
-for line in open('all_tags.txt'):
+for line in open('tag_names.txt'):
 	# Add the tag itself
 	tag = line[:-1]
 	links = [{'word': tag, 'score': 1.0}]

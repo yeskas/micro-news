@@ -1,77 +1,10 @@
 package tagger
 
 
-import scala.collection.mutable.ArrayBuffer
-import scala.io.Source
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import com.rabbitmq.client.{AMQP, ConnectionFactory, DefaultConsumer, Envelope, MessageProperties}
-
-
-// Classes to represent words related to tag words
-case class Link(word: String, score: Double)
-case class Tag(word: String, links: List[Link])
-
-
-// Classes to represent incoming article jsons
-case class ArticleSource(name: String, link: String, icon: String)
-case class Article(id: Int, link: String, title: String, body: String, image: String, timestamp: String,
-                   source: ArticleSource)
-
-
-// Assigns tags to articles based on a specified config file
-class Tagger(tagsFilePath: String) {
-	private val allTags = parseTags()
-
-	// Read entire tags file into memory, since it's small in size
-	private def parseTags() : List[Tag] = {
-		println(s"Parsing tags data from: $tagsFilePath")
-
-		val source = scala.io.Source.fromFile(tagsFilePath)
-		val tagsJson = try source.mkString finally source.close()
-
-		implicit val formats = DefaultFormats
-		val json = parse(tagsJson)
-		json.extract[List[Tag]]
-	}
-
-	def tagArticle(article: Article): Array[String] = {
-		// parse out all words & count occurrences
-		val wordRegex = "(\\w+)".r
-
-		val titleWords = wordRegex.findAllIn(article.title.toLowerCase()).toList
-		val bodyWords = wordRegex.findAllIn(article.body.toLowerCase()).toList
-
-		val allWords = titleWords ++ bodyWords
-		val wordToOccurrences = allWords.groupBy(word=>word).mapValues(_.size)
-
-		// score each potential tag, based on # of occurrences and it's relevance
-		// i.e. scalar multiplication of occurrences-vector & scores-vector
-		val tagScores = new ArrayBuffer[(String, Double)]()
-		for (tag <- allTags) {
-			var score = 0.0
-
-			for (link <- tag.links) {
-				val count = wordToOccurrences.getOrElse(link.word, 0)
-				score += link.score * count
-			}
-
-			println(s"Score for ${tag.word} is $score")
-			tagScores += ((tag.word, score))
-		}
-
-		// keep top up-to-5 non-zero tags
-		val topTags = tagScores
-			.toArray
-			.filter(tagScore => tagScore._2 > 0)
-			.sortWith(_._2 > _._2)
-			.slice(0, 5)
-			.map(tagScore => tagScore._1)
-
-		topTags
-	}
-}
 
 
 object TaggerApp {
@@ -82,7 +15,7 @@ object TaggerApp {
 	def main(argv: Array[String]): Unit = {
 		println("STARTING THE TAGGER")
 
-		val tagger = new Tagger("util/tags.json")
+		val tagger = new Tagger("config/tags.json")
 
 		// Initialize RabbitMQ connection
 		// TODO: initialize from config
