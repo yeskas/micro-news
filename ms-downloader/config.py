@@ -9,3 +9,7 @@ service_registry = {
 		}
 	}
 }
+
+# Returns queue name from configs in the service registry
+def amqp_addr(service_name):
+	return service_registry[service_name]['amqp']['queue']

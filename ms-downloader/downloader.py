@@ -9,7 +9,7 @@ import pika
 from pyquery import PyQuery
 import redis
 
-from config import rabbitmq_settings, service_registry
+from config import rabbitmq_settings, amqp_addr
 
 
 # Fetch the list of latest news based on the source-specific configs
@@ -77,6 +77,7 @@ def download_article(source, link):
 		return None
 
 
+# Wrapper for redis queries related to articles
 class RedisClient(object):
 	# Delete articles after 3 days
 	ARTICLE_TTL = 3 * 24 * 60 * 60
@@ -119,20 +120,44 @@ class RedisClient(object):
 		return self.client.get(key_by_id)
 
 
+# Wrapper around a RabbitMQ producer channel;
+# Sets up & tears down connection;
+class RabbitMQClient(object):
+	def __init__(self, host, queue):
+		self.conn = pika.BlockingConnection(
+			pika.ConnectionParameters(
+				host=rabbitmq_settings['host']
+			)
+		)
+
+		self.queue = queue
+
+		self.ch = self.conn.channel()
+		self.ch.queue_declare(
+			queue=self.queue,
+			durable=True
+		)
+
+	def produce(self, message):
+		self.ch.basic_publish(
+			exchange='',
+			routing_key=self.queue,
+			body=message,
+			properties=pika.BasicProperties(
+				delivery_mode = 2, # make message persistent
+			)
+		)
+
+	def disconnect(self):
+		self.conn.close()
+		self.conn = None
+		self.queue = None
+		self.ch = None
+
+
 if __name__ == '__main__':
 	db = RedisClient()
-	# TODO: move into separate class
-	queue_conn = pika.BlockingConnection(
-		pika.ConnectionParameters(
-			host=rabbitmq_settings['host']
-		)
-	)
-	channel = queue_conn.channel()
-	channel.queue_declare(
-		# TODO: redo confg format
-		queue=service_registry['ms-tagger']['amqp']['queue'],
-		durable=True
-	)
+	tagger_conn = RabbitMQClient(rabbitmq_settings['host'], amqp_addr('ms-tagger'))
 
 	for source in db.get_all_sources():
 		links = download_article_links(source)
@@ -144,7 +169,7 @@ if __name__ == '__main__':
 		source_clone = copy.deepcopy(source)
 		source_clone.pop('parsing_data', None)
 
-		for link in links:
+		for link in links[:10]:
 			# Check if already downloaded
 			if db.has_article(link):
 				print 'Ignoring: %s' % link
@@ -161,20 +186,12 @@ if __name__ == '__main__':
 				article['id'] = _id
 				print 'Saved to db'
 
-				channel.basic_publish(
-					exchange='',
-					routing_key=service_registry['ms-tagger']['amqp']['queue'],
-					body=json.dumps(article),
-					properties=pika.BasicProperties(
-						delivery_mode = 2, # make message persistent
-					)
-				)
+				tagger_conn.produce(json.dumps(article))
 				print 'Sent to tagger'
-
 
 			else:
 				print 'Unparseable: %s' % link
 
-	queue_conn.close()
+	tagger_conn.disconnect()
 
 
