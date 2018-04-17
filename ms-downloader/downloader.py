@@ -169,7 +169,7 @@ if __name__ == '__main__':
 		source_clone = copy.deepcopy(source)
 		source_clone.pop('parsing_data', None)
 
-		for link in links[:10]:
+		for link in links:
 			# Check if already downloaded
 			if db.has_article(link):
 				print 'Ignoring: %s' % link
