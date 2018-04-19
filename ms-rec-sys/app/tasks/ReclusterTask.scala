@@ -63,7 +63,7 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 
 			val idToBodyJson = mutable.Map[Int, String]()
 			for (row <- rows.asScala) {
-				idToBodyJson(row.getInt("id")) = row.getString("body_json")
+				idToBodyJson(row.getInt("id")) = row.getString("article_json")
 			}
 
 			idToBodyJson
@@ -92,8 +92,8 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 
 			val idToArticleJson = mutable.Map[Int, String]()
 			for (row <- rows.asScala) {
-				// TODO: add article id to the body json here or in the caller
-				idToArticleJson(row.getInt("id")) = row.getString("body_json")
+				// TODO: add article id to the article json here or in the caller
+				idToArticleJson(row.getInt("id")) = row.getString("article_json")
 			}
 
 			// maintain order
@@ -266,10 +266,9 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 		}
 	}
 
-	// Schedule the task to recluster users, and assign the news per cluster
-	actorSystemNI.scheduler.schedule(initialDelay = 1.day, interval = 1.day) {
-		println("--- Starting the Recluster task ---")
 
+	// Step #1 of recluster task: groups all existing users into clusters
+	def stepClusterUsers(): KMeansResult = {
 		// 1. pull all user_tags into memory
 		val idToUserTags = CassandraClient.fetchUserTags()
 
@@ -279,15 +278,23 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 			idToUserTagsNormalized(id) = LinearAlgebra.normalize(tags)
 		}
 
-		// 3. run K-means clustering***:
+		// 3. run K-means clustering:
 		// - get cluster -> weights map
 		// - get user_id -> cluster_id map
+		// TODO: turn these 2 vals into CONFIG PARAMS
 		val k = 2
 		val numSteps = 10
 		val kMeans = KMeansClustering.run(k, numSteps, idToUserTagsNormalized)
 
 		// 4. save user_id -> cluster_id in a tmp table
 		// NOT REQUIRED FOR SMALL DATASETS
+
+		kMeans
+	}
+
+	// Step #2 of recluster task: given the clusters from step #1, collects best-matching articles for each cluster
+	def stepAssignNewsToClusters(kMeans: KMeansResult): Unit = {
+		val k = 2
 
 		// 5. pull all articles & article_tags into memory
 		// val idToArticleJson = CassandraClient.fetchArticles()
@@ -333,6 +340,16 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 				CassandraClient.updateUser(userId, newClusterId)
 			}
 		}
+	}
+
+
+	// Schedule the task to recluster users, and assign the news per cluster
+	actorSystemNI.scheduler.schedule(initialDelay = 1.second, interval = 1.day) {
+		println("--- Starting the Recluster task ---")
+
+		val kMeans = stepClusterUsers()
+
+		stepAssignNewsToClusters(kMeans)
 	}
 
 
@@ -414,7 +431,7 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 
 
 
-	actorSystemNI.scheduler.schedule(initialDelay = 1.second, interval = 60.seconds) {
+	actorSystemNI.scheduler.schedule(initialDelay = 1.day, interval = 60.seconds) {
 
 		println("--- Starting the PSEUDO-Recluster task ---")
 
