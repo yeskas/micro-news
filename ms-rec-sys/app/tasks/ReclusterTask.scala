@@ -144,26 +144,10 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	//import ExecutionContext.Implicits.global
 
 
-	val demoQueue = Queue("demo", durable = true, autoDelete = false)
 	val articleQueue = Queue("tagger:rec-sys:articles", durable = true, autoDelete = false)
 	val feedbackQueue = Queue("gateway:rec-sys:feedback", durable = true, autoDelete = false)
 
 
-	def addArticleConsumerToRabbitControl(rabbitControl : ActorRef, suffix : String) : SubscriptionRef  = {
-		val result = Subscription.run(rabbitControl) {
-			import Directives._
-			channel(qos=1) {
-				consume(demoQueue) {
-					body(as[String]) { data =>
-						println(s"received <<<$suffix>>>: ${data}")
-						ack
-					}
-				}
-			}
-		}
-
-		result
-	}
 	def registerArticleConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
 		val subscription = Subscription.run(rabbitControl) {
 			import Directives._
@@ -198,7 +182,6 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	}
 
 
-	var subscription = addArticleConsumerToRabbitControl(rabbitControl, "INITIAL")
 	var articleConsumer = registerArticleConsumer(rabbitControl)
 	var feedbackConsumer = registerFeedbackConsumer(rabbitControl)
 
