@@ -11,6 +11,14 @@ import play.api.inject.{SimpleModule, _}
 import akka.actor.ActorSystem
 import javax.inject.Inject
 
+import akka.actor.{ ActorRef, ActorSystem, Props }
+import com.spingo.op_rabbit.{ Directives, Message, Publisher, Queue, RabbitControl, RecoveryStrategy }
+import com.spingo.op_rabbit.{ Subscription, SubscriptionRef }
+import scala.concurrent.ExecutionContext
+
+import consumers.ArticleConsumer
+import consumers.FeedbackConsumer
+
 import helpers.Types._
 import helpers.LinearAlgebra
 import helpers.{KMeansResult, KMeansClustering}
@@ -20,6 +28,56 @@ import helpers.CassandraClient
 class ReclusterTaskModule extends SimpleModule(bind[ReclusterTask].toSelf.eagerly())
 
 class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: ExecutionContext) {
+
+	// Actor system & helper vals for the RabbitMQ consumers
+	private val RABBITMQ_ARTICLE_QUEUE_NAME = "tagger:rec-sys:articles"
+	private val RABBITMQ_FEEDBACK_QUEUE_NAME = "gateway:rec-sys:feedback"
+
+	implicit val actorSystem = ActorSystem("rabbitmq_as")
+	implicit val recoveryStrategy = RecoveryStrategy.nack(false)
+
+	val rabbitControl = actorSystem.actorOf(Props(new RabbitControl))
+	val articleQueue = Queue(RABBITMQ_ARTICLE_QUEUE_NAME, durable = true, autoDelete = false)
+	val feedbackQueue = Queue(RABBITMQ_FEEDBACK_QUEUE_NAME, durable = true, autoDelete = false)
+
+
+	// Returns a rabbit-op article subscription (consumer) attached to the specified akka actor
+	def registerArticleConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
+		val subscription = Subscription.run(rabbitControl) {
+			import Directives._
+			channel(qos=1) {
+				consume(articleQueue) {
+					body(as[String]) { data =>
+						println(s"received ARTICLE: : ${data}")
+						ArticleConsumer.handleMessage(data)
+						ack
+					}
+				}
+			}
+		}
+
+		subscription
+	}
+
+
+	// Returns a rabbit-op feedback subscription (consumer) attached to the specified akka actor
+	def registerFeedbackConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
+		val subscription = Subscription.run(rabbitControl) {
+			import Directives._
+			channel(qos=1) {
+				consume(feedbackQueue) {
+					body(as[String]) { data =>
+						println(s"received FEEDBACK: : ${data}")
+						FeedbackConsumer.handleMessage(data)
+						ack
+					}
+				}
+			}
+		}
+
+		subscription
+	}
+
 
 	// Class to keep track of top `limit` articles relevant to a cluster with `tags`;
 	// Implemented as a light wrapper around scala's PriorityQueue;
@@ -76,6 +134,7 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 		kMeans
 	}
 
+
 	// Step #2 of recluster task: given the clusters from step #1, collects best-matching articles for each cluster
 	def stepAssignNewsToClusters(kMeans: KMeansResult): Unit = {
 		val k = 2
@@ -127,65 +186,9 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	}
 
 
-
-
-	import akka.actor.{ ActorRef, ActorSystem, Props }
-	import com.spingo.op_rabbit.{ Directives, Message, Publisher, Queue, RabbitControl, RecoveryStrategy, Subscription, SubscriptionRef }
-	import scala.concurrent.ExecutionContext
-
-	import consumers.ArticleConsumer
-	import consumers.FeedbackConsumer
-
-
-
-	implicit val actorSystem = ActorSystem("demo")
-	val rabbitControl = actorSystem.actorOf(Props(new RabbitControl))
-	implicit val recoveryStrategy = RecoveryStrategy.nack(false)
-	//import ExecutionContext.Implicits.global
-
-
-	val articleQueue = Queue("tagger:rec-sys:articles", durable = true, autoDelete = false)
-	val feedbackQueue = Queue("gateway:rec-sys:feedback", durable = true, autoDelete = false)
-
-
-	def registerArticleConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
-		val subscription = Subscription.run(rabbitControl) {
-			import Directives._
-			channel(qos=1) {
-				consume(articleQueue) {
-					body(as[String]) { data =>
-						println(s"received ARTICLE: : ${data}")
-						ArticleConsumer.handleMessage(data)
-						ack
-					}
-				}
-			}
-		}
-
-		subscription
-	}
-	def registerFeedbackConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
-		val subscription = Subscription.run(rabbitControl) {
-			import Directives._
-			channel(qos=1) {
-				consume(feedbackQueue) {
-					body(as[String]) { data =>
-						println(s"received FEEDBACK: : ${data}")
-						FeedbackConsumer.handleMessage(data)
-						ack
-					}
-				}
-			}
-		}
-
-		subscription
-	}
-
-
-	var articleConsumer = registerArticleConsumer(rabbitControl)
-	var feedbackConsumer = registerFeedbackConsumer(rabbitControl)
-
-
+	// Start the two RabbitMQ consumers
+	private var articleConsumer = registerArticleConsumer(rabbitControl)
+	private var feedbackConsumer = registerFeedbackConsumer(rabbitControl)
 
 
 	// Schedule the task to:
