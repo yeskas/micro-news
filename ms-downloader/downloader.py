@@ -104,14 +104,14 @@ class RedisClient(object):
 		self.client.incr('news:next_id')
 		article['id'] = next_id
 
-		# add to query full article by id
+		# add (id -> full article) mapping
 		key_by_id = 'news:by_id:%s' % next_id
 		article_json = json.dumps(article)
 		self.client.set(key_by_id, article_json, ex=self.ARTICLE_TTL)
 
-		# add to query presense by link
+		# add (link -> id) mapping
 		key_by_link = 'news:by_link:%s' % article['link']
-		self.client.set(key_by_link, 1, ex=self.ARTICLE_TTL)
+		self.client.set(key_by_link, next_id, ex=self.ARTICLE_TTL)
 
 		return next_id
 
