@@ -385,16 +385,6 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	}
 
 
-	// Schedule the task to recluster users, and assign the news per cluster
-	actorSystemNI.scheduler.schedule(initialDelay = 1.second, interval = 1.day) {
-		println("--- Starting the Recluster task ---")
-
-		val kMeans = stepClusterUsers()
-
-		stepAssignNewsToClusters(kMeans)
-	}
-
-
 
 
 	////////////// Pseudo reclusterer; TODO: remove ////////////
@@ -473,28 +463,22 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 
 
 
-	actorSystemNI.scheduler.schedule(initialDelay = 1.day, interval = 60.seconds) {
 
-		println("--- Starting the PSEUDO-Recluster task ---")
+	// Schedule the task to:
+	// - 1. recluster users, and
+	// - 2. assign the news per cluster
+	actorSystemNI.scheduler.schedule(initialDelay = 1.second, interval = 1.day) {
+		println("--- Starting the Recluster task ---")
 
 		feedbackConsumer.close()
 		feedbackConsumer.closed.foreach { _ =>
-			println("---- closed feedbackConsumer")
-			println("---- starting clustering")
-			Thread.sleep(10 * 1000)
-			println("---- done with clustering")
-
-
+			val kMeans = stepClusterUsers()
 			feedbackConsumer = registerFeedbackConsumer(rabbitControl)
-			println("---- resumed feedbackConsumer")
+
 			articleConsumer.close()
 			articleConsumer.closed.foreach { _ =>
-				println("#### closed articleConsumer")
-				println("#### starting ASSIGNING TO CLUSTERS")
-				Thread.sleep(10 * 1000)
-				println("#### done with ASSIGNING")
+				stepAssignNewsToClusters(kMeans)
 				articleConsumer = registerArticleConsumer(rabbitControl)
-				println("#### resumed articleConsumer")
 			}
 		}
 	}
