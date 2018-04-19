@@ -42,6 +42,15 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 	val feedbackQueue = Queue(RABBITMQ_FEEDBACK_QUEUE_NAME, durable = true, autoDelete = false)
 
 
+	// Clustering params
+	// K in the K-Means algorithm
+	val CLUSTERING_K = 2
+	// # of steps in the K-Means algorithm
+	val CLUSTERING_STEPS = 10
+	// How many best articles to add to each cluster
+	val CLUSTERING_KEEP_TOP = 3
+
+
 	// Returns a rabbit-op article subscription (consumer) attached to the specified akka actor
 	def registerArticleConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
 		val subscription = Subscription.run(rabbitControl) {
@@ -124,10 +133,7 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 		// 3. run K-means clustering:
 		// - get cluster -> weights map
 		// - get user_id -> cluster_id map
-		// TODO: turn these 2 vals into CONFIG PARAMS
-		val k = 2
-		val numSteps = 10
-		val kMeans = KMeansClustering.run(k, numSteps, idToUserTagsNormalized)
+		val kMeans = KMeansClustering.run(CLUSTERING_K, CLUSTERING_STEPS, idToUserTagsNormalized)
 
 		// 4. save user_id -> cluster_id in a tmp table
 		// NOT REQUIRED FOR SMALL DATASETS
@@ -138,14 +144,14 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 
 	// Step #2 of recluster task: given the clusters from step #1, collects best-matching articles for each cluster
 	def stepAssignNewsToClusters(kMeans: KMeansResult): Unit = {
-		val k = 2
+		val k = CLUSTERING_K
 
 		// 5. pull all articles & article_tags into memory
 		// val idToArticleJson = CassandraClient.fetchArticles()
 		val idToArticleTags = CassandraClient.fetchArticleTags()
 
 		// 6. build cluster_id -> articles_json map
-		val clusterTops = Array.tabulate(k) { i => new ClusterTopArticles(kMeans.means(i), 3) }
+		val clusterTops = Array.tabulate(k) { i => new ClusterTopArticles(kMeans.means(i), CLUSTERING_KEEP_TOP) }
 		for ((id, articleTags) <- idToArticleTags) {
 			println(id + " - " + articleTags.mkString(","))
 			for (clusterTop <- clusterTops) {
