@@ -26,3 +26,13 @@ libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.5.3"
 
 // Java Client for RabbitMQ
 libraryDependencies += "com.rabbitmq" % "amqp-client" % "5.2.0"
+
+// RabbitMQ client based on Akka
+val opRabbitVersion = "2.1.0"
+libraryDependencies ++= Seq(
+	"com.spingo" %% "op-rabbit-core"        % opRabbitVersion,
+	"com.spingo" %% "op-rabbit-play-json"   % opRabbitVersion,
+	"com.spingo" %% "op-rabbit-json4s"      % opRabbitVersion,
+	"com.spingo" %% "op-rabbit-airbrake"    % opRabbitVersion,
+	"com.spingo" %% "op-rabbit-akka-stream" % opRabbitVersion
+)

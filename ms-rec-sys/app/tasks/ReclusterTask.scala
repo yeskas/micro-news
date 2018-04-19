@@ -17,7 +17,7 @@ import com.datastax.driver.core.{Cluster, ResultSet, Row}
 
 class ReclusterTaskModule extends SimpleModule(bind[ReclusterTask].toSelf.eagerly())
 
-class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionContext: ExecutionContext) {
+class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: ExecutionContext) {
 
 	// Shorthand for cleaner code
 	type Vec = Array[Double]
@@ -267,7 +267,7 @@ class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionCont
 	}
 
 	// Schedule the task to recluster users, and assign the news per cluster
-	actorSystem.scheduler.schedule(initialDelay = 1.hour, interval = 1.hour) {
+	actorSystemNI.scheduler.schedule(initialDelay = 1.day, interval = 1.day) {
 		println("--- Starting the Recluster task ---")
 
 		// 1. pull all user_tags into memory
@@ -331,6 +331,105 @@ class ReclusterTask @Inject() (actorSystem: ActorSystem) (implicit executionCont
 
 			for (userId <- userIds) {
 				CassandraClient.updateUser(userId, newClusterId)
+			}
+		}
+	}
+
+
+
+
+	////////////// Pseudo reclusterer; TODO: remove ////////////
+	import akka.actor.{ ActorRef, ActorSystem, Props }
+	import com.spingo.op_rabbit.{ Directives, Message, Publisher, Queue, RabbitControl, RecoveryStrategy, Subscription, SubscriptionRef }
+	import scala.concurrent.ExecutionContext
+
+
+	implicit val actorSystem = ActorSystem("demo")
+	val rabbitControl = actorSystem.actorOf(Props(new RabbitControl))
+	implicit val recoveryStrategy = RecoveryStrategy.nack(false)
+	//import ExecutionContext.Implicits.global
+
+
+	val demoQueue = Queue("demo", durable = true, autoDelete = false)
+	val articleQueue = Queue("tagger:rec-sys:articles", durable = true, autoDelete = false)
+	val feedbackQueue = Queue("gateway:rec-sys:feedback", durable = true, autoDelete = false)
+
+
+	def addArticleConsumerToRabbitControl(rabbitControl : ActorRef, suffix : String) : SubscriptionRef  = {
+		val result = Subscription.run(rabbitControl) {
+			import Directives._
+			channel(qos=3) {
+				consume(demoQueue) {
+					body(as[String]) { data =>
+						println(s"received <<<$suffix>>>: ${data}")
+						ack
+					}
+				}
+			}
+		}
+
+		result
+	}
+	def registerArticleConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
+		val subscription = Subscription.run(rabbitControl) {
+			import Directives._
+			channel(qos=3) {
+				consume(articleQueue) {
+					body(as[String]) { data =>
+						println(s"received ARTICLES: : ${data}")
+						ack
+					}
+				}
+			}
+		}
+
+		subscription
+	}
+	def registerFeedbackConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
+		val subscription = Subscription.run(rabbitControl) {
+			import Directives._
+			channel(qos=3) {
+				consume(feedbackQueue) {
+					body(as[String]) { data =>
+						println(s"received FEEDBACK: : ${data}")
+						ack
+					}
+				}
+			}
+		}
+
+		subscription
+	}
+
+
+	var subscription = addArticleConsumerToRabbitControl(rabbitControl, "INITIAL")
+	var articleConsumer = registerArticleConsumer(rabbitControl)
+	var feedbackConsumer = registerFeedbackConsumer(rabbitControl)
+
+
+
+	actorSystemNI.scheduler.schedule(initialDelay = 1.second, interval = 60.seconds) {
+
+		println("--- Starting the PSEUDO-Recluster task ---")
+
+		feedbackConsumer.close()
+		feedbackConsumer.closed.foreach { _ =>
+			println("---- closed feedbackConsumer")
+			println("---- starting clustering")
+			Thread.sleep(10 * 1000)
+			println("---- done with clustering")
+
+
+			feedbackConsumer = registerFeedbackConsumer(rabbitControl)
+			println("---- resumed feedbackConsumer")
+			articleConsumer.close()
+			articleConsumer.closed.foreach { _ =>
+				println("#### closed articleConsumer")
+				println("#### starting ASSIGNING TO CLUSTERS")
+				Thread.sleep(10 * 1000)
+				println("#### done with ASSIGNING")
+				articleConsumer = registerArticleConsumer(rabbitControl)
+				println("#### resumed articleConsumer")
 			}
 		}
 	}

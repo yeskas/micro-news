@@ -95,7 +95,7 @@ class FeedbackConsumer @Inject() (actorSystem: ActorSystem) (implicit executionC
 
 	// Make it start @ app start
 	// TODO: find a better way to launch @ startup
-	actorSystem.scheduler.schedule(initialDelay = 2.seconds, interval = 100.days) {
+	actorSystem.scheduler.schedule(initialDelay = 1.day, interval = 1.day) {
 		println("---- Starting the FeedbackConsumer ----")
 
 		// Initialize RabbitMQ connection
