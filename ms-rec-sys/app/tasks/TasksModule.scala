@@ -25,9 +25,10 @@ import helpers.{KMeansResult, KMeansClustering}
 import helpers.CassandraClient
 
 
-class ReclusterTaskModule extends SimpleModule(bind[ReclusterTask].toSelf.eagerly())
+class TasksModule extends SimpleModule(bind[Tasks].toSelf.eagerly())
 
-class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: ExecutionContext) {
+// Class to start/schedule offline tasks: RabbitMQ clients & the Reclusterer
+class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: ExecutionContext) {
 
 	// Actor system & helper vals for the RabbitMQ consumers
 	private val RABBITMQ_ARTICLE_QUEUE_NAME = "tagger:rec-sys:articles"
