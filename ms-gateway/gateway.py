@@ -15,7 +15,7 @@ from secret_key import secret_key
 app.secret_key = secret_key
 
 
-# helper methods
+# Wrapper around article helper methods
 class Article(object):
 	MAX_SUBTITLE_LEN = 200
 
@@ -112,6 +112,7 @@ def index():
 			item['subtitle'] = Article.extract_subtitle(body)
 
 	return render_template('news.html', user=user, items=items)
+
 
 # User changed their name in the modal
 @app.route('/set_user_name', methods=['POST'])
