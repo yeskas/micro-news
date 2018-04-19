@@ -2,16 +2,8 @@ package consumers
 
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
-
-import play.api.inject.{SimpleModule, _}
-
-import akka.actor.ActorSystem
-import javax.inject.Inject
 
 import com.datastax.driver.core.{Cluster, ResultSet, Row}
-import com.rabbitmq.client.{AMQP, ConnectionFactory, DefaultConsumer, Envelope, MessageProperties}
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
@@ -21,12 +13,7 @@ import org.json4s.jackson.JsonMethods._
 case class Article(id: Int, tags: List[String])
 
 
-class ArticleConsumerModule extends SimpleModule(bind[ArticleConsumer].toSelf.eagerly())
-
-
-class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionContext: ExecutionContext) {
-	private val IN_TASK_QUEUE_NAME = "tagger:rec-sys:articles"
-
+object ArticleConsumer {
 	// TODO: combine all CassandraClient classes
 	object CassandraClient {
 		private val cluster = Cluster.builder()
@@ -66,43 +53,17 @@ class ArticleConsumer @Inject() (actorSystem: ActorSystem) (implicit executionCo
 
 	}
 
-	// Make it start @ app start
-	// TODO: find a better way to launch @ startup
-	actorSystem.scheduler.schedule(initialDelay = 1.day, interval = 1.day) {
-		println("---- Starting the ArticleConsumer ----")
+	def handleMessage(message: String): Unit = {
+		println("Received message: " + message)
 
-		// Initialize RabbitMQ connection
-		// TODO: initialize from config
-		val factory = new ConnectionFactory()
-		factory.setHost("localhost")
-		val connection = factory.newConnection()
-		val channel = connection.createChannel()
-		channel.queueDeclare(IN_TASK_QUEUE_NAME, true, false, false, null)
-		channel.basicQos(1)
+		// Parse out the article object
+		val articleJson = message
+		implicit val formats = DefaultFormats
+		val json = parse(articleJson)
+		val article = json.extract[Article]
 
-		println("Waiting for messages...")
+		CassandraClient.addArticle(article.id, article.tags, articleJson)
 
-		// Set up the message handler
-		val consumer = new DefaultConsumer(channel) {
-			override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties,
-			                            body: Array[Byte]): Unit = {
-				val articleJson = new String(body, "UTF-8")
-				println("Received message: " + articleJson)
-
-				// Parse out the article object
-				implicit val formats = DefaultFormats
-				val json = parse(articleJson)
-				val article = json.extract[Article]
-
-				CassandraClient.addArticle(article.id, article.tags, articleJson)
-
-				println("Done with message\n\n\n")
-				channel.basicAck(envelope.getDeliveryTag, false)
-			}
-		}
-
-		// Block for new messages
-		channel.basicConsume(IN_TASK_QUEUE_NAME, false, consumer)
+		println("Done with message\n\n\n")
 	}
-
 }

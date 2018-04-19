@@ -343,6 +343,10 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	import com.spingo.op_rabbit.{ Directives, Message, Publisher, Queue, RabbitControl, RecoveryStrategy, Subscription, SubscriptionRef }
 	import scala.concurrent.ExecutionContext
 
+	import consumers.ArticleConsumer
+	import consumers.FeedbackConsumer
+
+
 
 	implicit val actorSystem = ActorSystem("demo")
 	val rabbitControl = actorSystem.actorOf(Props(new RabbitControl))
@@ -358,7 +362,7 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	def addArticleConsumerToRabbitControl(rabbitControl : ActorRef, suffix : String) : SubscriptionRef  = {
 		val result = Subscription.run(rabbitControl) {
 			import Directives._
-			channel(qos=3) {
+			channel(qos=1) {
 				consume(demoQueue) {
 					body(as[String]) { data =>
 						println(s"received <<<$suffix>>>: ${data}")
@@ -373,10 +377,11 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	def registerArticleConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
 		val subscription = Subscription.run(rabbitControl) {
 			import Directives._
-			channel(qos=3) {
+			channel(qos=1) {
 				consume(articleQueue) {
 					body(as[String]) { data =>
-						println(s"received ARTICLES: : ${data}")
+						println(s"received ARTICLE: : ${data}")
+						ArticleConsumer.handleMessage(data)
 						ack
 					}
 				}
@@ -388,10 +393,11 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 	def registerFeedbackConsumer(rabbitControl: ActorRef) : SubscriptionRef  = {
 		val subscription = Subscription.run(rabbitControl) {
 			import Directives._
-			channel(qos=3) {
+			channel(qos=1) {
 				consume(feedbackQueue) {
 					body(as[String]) { data =>
 						println(s"received FEEDBACK: : ${data}")
+						FeedbackConsumer.handleMessage(data)
 						ack
 					}
 				}

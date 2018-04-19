@@ -4,16 +4,7 @@ package consumers
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
-
-import play.api.inject.{SimpleModule, _}
-
-import akka.actor.ActorSystem
-import javax.inject.Inject
-
 import com.datastax.driver.core.{Cluster, ResultSet, Row}
-import com.rabbitmq.client.{AMQP, ConnectionFactory, DefaultConsumer, Envelope, MessageProperties}
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
@@ -23,12 +14,7 @@ import org.json4s.jackson.JsonMethods._
 case class Feedback(userId: Int, articleId: Int)
 
 
-class FeedbackConsumerModule extends SimpleModule(bind[FeedbackConsumer].toSelf.eagerly())
-
-
-class FeedbackConsumer @Inject() (actorSystem: ActorSystem) (implicit executionContext: ExecutionContext) {
-	private val IN_TASK_QUEUE_NAME = "gateway:rec-sys:feedback"
-
+object FeedbackConsumer {
 	// TODO: combine all CassandraClient classes
 	object CassandraClient {
 		private val cluster = Cluster.builder()
@@ -44,6 +30,8 @@ class FeedbackConsumer @Inject() (actorSystem: ActorSystem) (implicit executionC
 		def addFeedback(feedback: Feedback) : Unit = {
 			val userId = feedback.userId
 			val articleId = feedback.articleId
+
+			println(s">>>>>>>>>>> $userId, >>>>>>>> $articleId")
 
 			// If first feedback by user, add to users table
 			var rs = session.execute(s"SELECT id FROM test01.users where id = $userId")
@@ -93,43 +81,17 @@ class FeedbackConsumer @Inject() (actorSystem: ActorSystem) (implicit executionC
 
 	}
 
-	// Make it start @ app start
-	// TODO: find a better way to launch @ startup
-	actorSystem.scheduler.schedule(initialDelay = 1.day, interval = 1.day) {
-		println("---- Starting the FeedbackConsumer ----")
+	def handleMessage(message: String): Unit = {
+		println("Received message: " + message)
 
-		// Initialize RabbitMQ connection
-		// TODO: initialize from config
-		val factory = new ConnectionFactory()
-		factory.setHost("localhost")
-		val connection = factory.newConnection()
-		val channel = connection.createChannel()
-		channel.queueDeclare(IN_TASK_QUEUE_NAME, true, false, false, null)
-		channel.basicQos(1)
+		// Parse out the feedback object
+		val feedbackJson = message;
+		implicit val formats = DefaultFormats
+		val json = parse(feedbackJson)
+		val feedback = json.extract[Feedback]
 
-		println("Waiting for messages...")
+		CassandraClient.addFeedback(feedback)
 
-		// Set up the message handler
-		val consumer = new DefaultConsumer(channel) {
-			override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties,
-										body: Array[Byte]): Unit = {
-				val feedbackJson = new String(body, "UTF-8")
-				println("Received message: " + feedbackJson)
-
-				// Parse out the article object
-				implicit val formats = DefaultFormats
-				val json = parse(feedbackJson)
-				val feedback = json.extract[Feedback]
-
-				CassandraClient.addFeedback(feedback)
-
-				println("Done with message\n\n\n")
-				channel.basicAck(envelope.getDeliveryTag, false)
-			}
-		}
-
-		// Block for new messages
-		channel.basicConsume(IN_TASK_QUEUE_NAME, false, consumer)
+		println("Done with message\n\n\n")
 	}
-
 }
