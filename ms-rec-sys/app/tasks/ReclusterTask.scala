@@ -31,12 +31,54 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 
 
 	object CassandraClient {
+		private val COL_TYPE_INT = 0
+		private val COL_TYPE_DOUBLE = 1
+		private val COL_TYPE_STRING = 2
+
 		private val cluster = Cluster.builder()
 			.addContactPoint("localhost")
 			.withPort(9042)
 			.build()
 
-		val session = cluster.connect()
+		private val session = cluster.connect()
+
+		private val sortedTagNames = getSortedTagNames()
+
+		// Returns (same) tag names used in:
+		// - user_tags
+		// - article_tags
+		// - cluster_tags
+		def getSortedTagNames() : Array[String] = {
+			val rs = session.execute("SELECT * FROM test01.cluster_tags WHERE id = 0")
+
+			val allTagNames = mutable.ArrayBuffer[String]()
+			for (columnDef <- rs.getColumnDefinitions.asList().asScala) {
+				val column = columnDef.getName()
+				if (column != "id") {
+					allTagNames += column
+				}
+			}
+
+			allTagNames.sorted.toArray
+		}
+
+		// Gets ordered (sorted by tag name) values of tags in a row of any of:
+		// - user_tags
+		// - article_tags
+		// - cluster_tags
+		def getAllTagValuesInRow(row: Row, colType: Int) : Vec = {
+			val result = mutable.ArrayBuffer[Double]()
+			for (tag <- sortedTagNames) {
+				if (row.isNull(tag)) {
+					result += 0
+				} else if (colType == COL_TYPE_INT) {
+					result += row.getInt(tag)
+				} else {
+					result += row.getDouble(tag)
+				}
+			}
+			result.toArray
+		}
 
 		def getValueFromCassandraTable() = {
 			val rs = session.execute("SELECT * FROM test01.clusters WHERE id = 0")
@@ -48,10 +90,9 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 			val rs = session.execute("SELECT * FROM test01.user_tags")
 			val rows = rs.all()
 
-			// TODO: unhardcode tag names
 			val idToTags = mutable.Map[Int, Vec]()
 			for (row <- rows.asScala) {
-				idToTags(row.getInt("id")) = Array(row.getInt("javascript"), row.getInt("literature"))
+				idToTags(row.getInt("id")) = getAllTagValuesInRow(row, COL_TYPE_INT)
 			}
 
 			idToTags
@@ -73,10 +114,9 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 			val rs = session.execute("SELECT * FROM test01.article_tags")
 			val rows = rs.all()
 
-			// TODO: unhardcode tag names
 			val idToTags = mutable.Map[Int, Vec]()
 			for (row <- rows.asScala) {
-				idToTags(row.getInt("id")) = Array(row.getInt("javascript"), row.getInt("literature"))
+				idToTags(row.getInt("id")) = getAllTagValuesInRow(row, COL_TYPE_INT)
 			}
 
 			idToTags
@@ -116,8 +156,8 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 
 			// TODO: unhardcode tag names
 			session.execute("" +
-				s"INSERT INTO test01.cluster_tags (id, javascript, literature) " +
-				s"VALUES ($newId, ${tags(0)}, ${tags(1)})"
+				s"INSERT INTO test01.cluster_tags (id, ${sortedTagNames.mkString(", ")}) " +
+				s"VALUES ($newId, ${tags.mkString(", ")})"
 			)
 		}
 
@@ -176,6 +216,8 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 
 		// Run K-means & return list of means & list of clusters
 		def run(k: Int, numSteps: Int, idToVector: mutable.Map[Int, Vec]): KMeansResult = {
+			// Identify dimension of vectors
+			val dim = idToVector.head._2.length
 
 			// Print params for debugging
 			println("STARTING K-MEANS CLUSTERING ALGORITHM")
@@ -218,7 +260,7 @@ class ReclusterTask @Inject() (actorSystemNI: ActorSystem) (implicit executionCo
 				/* Update step (update each mean to be centroid of its cluster) */
 				for (i <- 0 until k) {
 					val cluster = clusters(i)
-					val sumVector = Array.fill(k)(0.0)
+					val sumVector = Array.fill(dim)(0.0)
 
 					for (id <- cluster) {
 						val vector = idToVector(id)
