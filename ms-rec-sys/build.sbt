@@ -24,9 +24,6 @@ libraryDependencies += "com.datastax.cassandra" % "cassandra-driver-core" % "3.4
 // Parsing JSON
 libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.5.3"
 
-// Java Client for RabbitMQ
-libraryDependencies += "com.rabbitmq" % "amqp-client" % "5.2.0"
-
 // RabbitMQ client based on Akka
 val opRabbitVersion = "2.1.0"
 libraryDependencies ++= Seq(
