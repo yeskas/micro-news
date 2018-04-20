@@ -144,14 +144,14 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 
 	// Step #2 of recluster task: given the clusters from step #1, collects best-matching articles for each cluster
 	def stepAssignNewsToClusters(kMeans: KMeansResult): Unit = {
-		val k = CLUSTERING_K
-
 		// 5. pull all articles & article_tags into memory
 		// val idToArticleJson = CassandraClient.fetchArticles()
 		val idToArticleTags = CassandraClient.fetchArticleTags()
 
 		// 6. build cluster_id -> articles_json map
-		val clusterTops = Array.tabulate(k) { i => new ClusterTopArticles(kMeans.means(i), CLUSTERING_KEEP_TOP) }
+		val clusterTops = Array.tabulate(CLUSTERING_K) { i =>
+			new ClusterTopArticles(kMeans.means(i), CLUSTERING_KEEP_TOP)
+		}
 		for ((id, articleTags) <- idToArticleTags) {
 			println(id + " - " + articleTags.mkString(","))
 			for (clusterTop <- clusterTops) {
@@ -166,7 +166,7 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 
 		// 7. insert into clusters & cluster_tags tables
 		val clusterIdShift = CassandraClient.getNextClusterId()
-		for (i <- 0 until k) {
+		for (i <- 0 until CLUSTERING_K) {
 			val clusterTop = clusterTops(i)
 			val topArticleIds = clusterTop.getSortedArticles()
 
@@ -181,8 +181,8 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 			CassandraClient.insertCluster(clusterIdShift + i, topArticlesJson, kMeans.means(i))
 		}
 
-		// 8. wait & update user_id -> cluster_id
-		for (i <- 0 until k) {
+		// 8. update user_id -> cluster_id
+		for (i <- 0 until CLUSTERING_K) {
 			val userIds = kMeans.clusters(i)
 			val newClusterId = clusterIdShift + i
 
