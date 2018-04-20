@@ -7,3 +7,7 @@ This project is comprised of 5 services:
 - ms-tagger: assigns tags (topics) to articles
 - ms-rec-sys: recommends news to users based on their past habits
 
+References:
+- tag list is based on topics on medium.com
+- word links (used for tagging) are fetched from this awesome website: semantic-link.com
+- the current list of news sources: BBC, TechCrunch, Bloomberg, Sky Sports
