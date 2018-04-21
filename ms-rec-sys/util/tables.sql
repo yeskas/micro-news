@@ -29,7 +29,8 @@ CREATE TABLE article_tags (
 
 CREATE TABLE clusters (
 	id INT PRIMARY KEY,
-	articles_json TEXT
+	articles_json TEXT,
+	scores_json TEXT
 );
 
 CREATE TABLE cluster_tags (

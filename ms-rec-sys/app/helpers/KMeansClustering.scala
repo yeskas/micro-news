@@ -5,8 +5,8 @@ import scala.collection.mutable
 import Types._
 
 
-// means(i) is centroid of vectors corresponding to clusters(i)
-case class KMeansResult(means: Array[Vec], clusters: Array[UsersOfCluster])
+// means(i) is centroid of vectors corresponding to users in clusters(i)
+case class KMeansResult(means: Array[Vec], clusters: Array[IdsInCluster])
 
 
 object KMeansClustering {

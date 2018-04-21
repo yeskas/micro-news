@@ -19,6 +19,7 @@ import scala.concurrent.ExecutionContext
 import consumers.ArticleConsumer
 import consumers.FeedbackConsumer
 
+import helpers.Configs._
 import helpers.Types._
 import helpers.LinearAlgebra
 import helpers.{KMeansResult, KMeansClustering}
@@ -40,15 +41,6 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 	val rabbitControl = actorSystem.actorOf(Props(new RabbitControl))
 	val articleQueue = Queue(RABBITMQ_ARTICLE_QUEUE_NAME, durable = true, autoDelete = false)
 	val feedbackQueue = Queue(RABBITMQ_FEEDBACK_QUEUE_NAME, durable = true, autoDelete = false)
-
-
-	// Clustering params
-	// K in the K-Means algorithm
-	val CLUSTERING_K = 2
-	// # of steps in the K-Means algorithm
-	val CLUSTERING_STEPS = 10
-	// How many best articles to add to each cluster
-	val CLUSTERING_KEEP_TOP = 3
 
 
 	// Returns a rabbit-op article subscription (consumer) attached to the specified akka actor
@@ -93,7 +85,7 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 	// Implemented as a light wrapper around scala's PriorityQueue;
 	class ClusterTopArticles(clusterTags: Vec, limit: Int) {
 		// Priority queue of (articleId, score) tupes, ordered based on score
-		private val pq = new mutable.PriorityQueue[Tuple2[Int, Double]]()(Ordering.by[(Int, Double), Double](-_._2))
+		private val pq = new mutable.PriorityQueue[(Int, Double)]()(Ordering.by[(Int, Double), Double](-_._2))
 
 		// Adds the article to top news if it mathces well enough
 		def addArticle(id: Int, articleTags: Vec): Unit = {
@@ -106,14 +98,13 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 			}
 		}
 
-		// Returns current list of best-matching articles & clears the list
-		def getSortedArticles(): Array[Int] = {
+		// Returns current list of best-matching articles & their scores
+		def getSortedArticles(): Array[(Int, Double)] = {
 			println(pq)
 			pq
 				.clone // to keep data in pq
 				.dequeueAll
 				.reverse // since we order by -score, need to reverse here to return best-first
-				.map(_._1) // return only article ids
 				.toArray
 		}
 	}
@@ -161,24 +152,30 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 		println("Top articles by cluster:")
 		for (clusterTop <- clusterTops) {
 			val topArticles = clusterTop.getSortedArticles()
-			println(topArticles.mkString(","))
+			println("Article IDs:")
+			println(topArticles.map(_._1).mkString(","))
+			println("Article scores:")
+			println(topArticles.map(_._2).mkString(","))
 		}
 
 		// 7. insert into clusters & cluster_tags tables
 		val clusterIdShift = CassandraClient.getNextClusterId()
 		for (i <- 0 until CLUSTERING_K) {
 			val clusterTop = clusterTops(i)
-			val topArticleIds = clusterTop.getSortedArticles()
+			val sortedArticles = clusterTop.getSortedArticles()
+			val topArticleIds = sortedArticles.map(_._1)
+			val topArticleScores = sortedArticles.map(_._2)
 
 			// Many jsons of single articles
 			val topArticleJsons = CassandraClient.fetchOrderedArticleJsons(topArticleIds)
 
 			// One json representing all articles
 			val topArticlesJson = topArticleJsons.mkString("[", ", ", "]")
+			val topScoresJson = topArticleScores.mkString("[", ", ", "]")
 
 
 			println(topArticlesJson)
-			CassandraClient.insertCluster(clusterIdShift + i, topArticlesJson, kMeans.means(i))
+			CassandraClient.insertCluster(clusterIdShift + i, topArticlesJson, topScoresJson, kMeans.means(i))
 		}
 
 		// 8. update user_id -> cluster_id
