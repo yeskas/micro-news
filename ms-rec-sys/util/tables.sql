@@ -1,5 +1,11 @@
 -- These are cql queries, but using the .sql extension for the IDE
 
+CREATE KEYSPACE rs
+    WITH REPLICATION = {
+        'class': 'SimpleStrategy',
+        'replication_factor': 1
+    };
+
 DROP TABLE rs.users;
 DROP TABLE rs.user_tags;
 DROP TABLE rs.articles;

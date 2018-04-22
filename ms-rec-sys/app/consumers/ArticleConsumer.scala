@@ -56,7 +56,11 @@ object ArticleConsumer {
 		// Prepend to default cluster
 		var articlesJson = CassandraClient.fetchCluster(DEFAULT_CLUSTER_ID)._2
 		var articles = parse(articlesJson).extract[List[Article]]
-		articles = article +: articles.dropRight(1)
+		if (articles.length >= CLUSTERING_KEEP_TOP) {
+			articles = article +: articles.dropRight(1)
+		} else {
+			articles = article +: articles
+		}
 		articlesJson = articlesToJson(articles)
 		CassandraClient.updateCluster(DEFAULT_CLUSTER_ID, articlesJson, "")
 
