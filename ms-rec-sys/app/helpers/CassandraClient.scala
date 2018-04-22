@@ -143,7 +143,7 @@ object CassandraClient {
 		row.getInt("max_id") + 1
 	}
 
-	def insertCluster(newId: Int, articlesJson: String, topScoresJson: String,tags: Vec) : Unit = {
+	def insertCluster(newId: Int, articlesJson: String, topScoresJson: String, tags: Vec) : Unit = {
 		session.execute("" +
 			s"INSERT INTO test01.clusters (id, articles_json, scores_json) " +
 			s"VALUES ($newId, $$$$$articlesJson$$$$, '$topScoresJson')"

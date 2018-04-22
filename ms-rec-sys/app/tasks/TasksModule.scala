@@ -29,7 +29,8 @@ import helpers.CassandraClient
 class TasksModule extends SimpleModule(bind[Tasks].toSelf.eagerly())
 
 // Class to start/schedule offline tasks: RabbitMQ clients & the Reclusterer
-class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: ExecutionContext) {
+class Tasks @Inject() (actorSystemNI: ActorSystem)
+                      (implicit executionContext: TasksCustomExecutionContext) {
 
 	// Actor system & helper vals for the RabbitMQ consumers
 	private val RABBITMQ_ARTICLE_QUEUE_NAME = "tagger:rec-sys:articles"
@@ -199,7 +200,7 @@ class Tasks @Inject() (actorSystemNI: ActorSystem) (implicit executionContext: E
 	// - 1. recluster users, and
 	// - 2. assign the news per cluster
 	actorSystemNI.scheduler.schedule(initialDelay = 1.second, interval = 1.day) {
-		println("--- Starting the Recluster task ---")
+		println("--- Starting the Recluster task in CUSTOM CTX ---")
 
 		feedbackConsumer.close()
 		feedbackConsumer.closed.foreach { _ =>
