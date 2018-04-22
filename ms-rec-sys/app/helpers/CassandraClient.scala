@@ -72,6 +72,15 @@ object CassandraClient {
 
 
 	//////// CRUD for users & user_tags tables ////////
+	def getUserClusterId(userId: Int): Int = {
+		val rs = session.execute(s"SELECT cluster_id FROM test01.users WHERE id = $userId")
+		val row = rs.one()
+		val clusterId = if (row == null) DEFAULT_CLUSTER_ID else row.getInt("cluster_id")
+		clusterId
+	}
+
+
+
 	def updateUser(userId: Int, clusterId: Int) : Unit = {
 		session.execute("" +
 			s"UPDATE test01.users " +
@@ -90,6 +99,56 @@ object CassandraClient {
 		}
 
 		idToTags
+	}
+
+	// Adds feedback about user's click on article to the db:
+	// - adds user of first feedback
+	// - increments user's tags by article's tags
+	def addFeedback(userId: Int, articleId: Int) : Unit = {
+		// If first feedback by user, add to users table
+		var rs = session.execute(s"SELECT id FROM test01.users where id = $userId")
+		if (rs.isExhausted()) {
+			session.execute(s"INSERT INTO test01.users (id, cluster_id) VALUES ($userId, 0)")
+			session.execute(s"INSERT INTO test01.user_tags (id) VALUES ($userId)")
+		}
+
+		// Fetch all non-zero tags of article
+		val tagToArticleWeight = mutable.Map[String, Int]()
+		rs = session.execute(s"SELECT * FROM test01.article_tags where id = $articleId")
+		if (rs.isExhausted()) {
+			println("Got feedback on non-existent article")
+			return
+		}
+		var row = rs.one()
+		for (columnDef <- row.getColumnDefinitions.asList().asScala) {
+			val column = columnDef.getName()
+			if (column != "id") {
+				if (!row.isNull(column)) {
+					tagToArticleWeight(column) = row.getInt(column)
+				}
+			}
+		}
+
+		// Fetch the current values of same tags of user
+		val tagsCsv = tagToArticleWeight.keys.mkString(", ")
+		rs = session.execute(s"SELECT id, $tagsCsv FROM test01.user_tags where id = $userId")
+		row = rs.one()
+
+		// Write updated user tags to db
+		val setStatements = mutable.ArrayBuffer[String]()
+		for ((tag, articleWeight) <- tagToArticleWeight) {
+			var userWeight = 0
+			if (!row.isNull(tag)) {
+				userWeight = row.getInt(tag)
+			}
+
+			setStatements += s"$tag=${userWeight + articleWeight}"
+		}
+		session.execute("" +
+			s"UPDATE test01.user_tags " +
+			s"SET ${setStatements.mkString(", ")} " +
+			s"WHERE id = $userId"
+		)
 	}
 
 
