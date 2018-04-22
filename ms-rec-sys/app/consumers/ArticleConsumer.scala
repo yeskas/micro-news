@@ -13,6 +13,12 @@ import helpers.Types._
 import helpers.CassandraClient
 
 
+// Classes to represent incoming article jsons
+case class ArticleSource(name: String, link: String, icon: String)
+case class Article(id: Int, link: String, title: String, body: String, image: String, timestamp: String,
+				   source: ArticleSource, tags: List[String])
+
+
 object ArticleConsumer {
 
 	// Converts list of articles to json string

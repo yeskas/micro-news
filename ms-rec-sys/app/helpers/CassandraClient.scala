@@ -5,16 +5,8 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 import com.datastax.driver.core.{Cluster, ResultSet, Row}
 
-// TODO: DONT PARSE HERE
-import org.json4s._
-import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
-
 import Configs._
 import Types._
-
-
-// TODO: SEPARATE ARTICLE LOGIC FROM DB LOCIC
 
 
 object CassandraClient {
