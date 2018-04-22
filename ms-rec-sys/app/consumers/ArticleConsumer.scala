@@ -55,7 +55,7 @@ object ArticleConsumer {
 		CassandraClient.updateCluster(DEFAULT_CLUSTER_ID, articlesJson, "")
 
 		// Add to non-default clusters where it's in top list of matching articles
-		val clusterIdToTagValues = CassandraClient.fetchSomeClusterTags(article.tags)
+		val clusterIdToTagValues = CassandraClient.fetchClusterTags(article.tags)
 		for ((clusterId, tagValues) <- clusterIdToTagValues) {
 			if (clusterId != DEFAULT_CLUSTER_ID) {
 				// score of the new article in this cluster = sum of its matching tag weights

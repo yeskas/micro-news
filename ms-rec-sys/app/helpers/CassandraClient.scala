@@ -36,7 +36,7 @@ object CassandraClient {
 	// - user_tags
 	// - article_tags
 	// - cluster_tags
-	def getSortedTagNames() : Array[String] = {
+	private def getSortedTagNames() : Array[String] = {
 		val rs = session.execute("SELECT * FROM test01.cluster_tags WHERE id = 0")
 
 		val allTagNames = mutable.ArrayBuffer[String]()
@@ -54,7 +54,7 @@ object CassandraClient {
 	// - user_tags
 	// - article_tags
 	// - cluster_tags
-	def getAllTagValuesInRow(row: Row, colType: Int) : Vec = {
+	private def getAllTagValuesInRow(row: Row, colType: Int) : Vec = {
 		val result = mutable.ArrayBuffer[Double]()
 		for (tag <- sortedTagNames) {
 			if (row.isNull(tag)) {
@@ -68,10 +68,16 @@ object CassandraClient {
 		result.toArray
 	}
 
-	def getValueFromCassandraTable() = {
-		val rs = session.execute("SELECT * FROM test01.clusters WHERE id = 0")
-		val row = rs.one()
-		(row.getInt("id"), row.getString("articles_json"))
+
+
+
+	//////// CRUD for users & user_tags tables ////////
+	def updateUser(userId: Int, clusterId: Int) : Unit = {
+		session.execute("" +
+			s"UPDATE test01.users " +
+			s"SET cluster_id = $clusterId " +
+			s"WHERE id = $userId"
+		)
 	}
 
 	def fetchUserTags() : mutable.Map[Int, Vec] = {
@@ -86,16 +92,28 @@ object CassandraClient {
 		idToTags
 	}
 
+
+
+
+	//////// CRUD for articles & article_tags tables ////////
 	def fetchArticles() : mutable.Map[Int, String] = {
 		val rs = session.execute("SELECT * FROM test01.articles")
 		val rows = rs.all()
 
-		val idToBodyJson = mutable.Map[Int, String]()
+		val idToArticleJson = mutable.Map[Int, String]()
 		for (row <- rows.asScala) {
-			idToBodyJson(row.getInt("id")) = row.getString("article_json")
+			idToArticleJson(row.getInt("id")) = row.getString("article_json")
 		}
 
-		idToBodyJson
+		idToArticleJson
+	}
+
+	def insertArticle(id: Int, articleJson: String): Unit = {
+		// got cash?
+		session.execute("" +
+			s"INSERT INTO test01.articles (id, article_json) " +
+			s"VALUES ($id, $$$$$articleJson$$$$)"
+		)
 	}
 
 	def fetchArticleTags() : mutable.Map[Int, Vec] = {
@@ -110,6 +128,16 @@ object CassandraClient {
 		idToTags
 	}
 
+	def insertArticleTags(id: Int, tags: Array[String], tagValues: Array[Int]): Unit = {
+		val tags_csv = tags.mkString(", ")
+		val vals_csv = tagValues.mkString(", ")
+
+		session.execute("" +
+			s"INSERT INTO test01.article_tags (id, $tags_csv) " +
+			s"VALUES ($id, $vals_csv)"
+		)
+	}
+
 	// Fetch article jsons from db in the order specified
 	def fetchOrderedArticleJsons(ids: Array[Int]) : Array[String] = {
 		val rs = session.execute("" +
@@ -120,12 +148,22 @@ object CassandraClient {
 
 		val idToArticleJson = mutable.Map[Int, String]()
 		for (row <- rows.asScala) {
-			// TODO: add article id to the article json here or in the caller
 			idToArticleJson(row.getInt("id")) = row.getString("article_json")
 		}
 
 		// maintain order
 		ids.map(i => idToArticleJson(i))
+	}
+
+
+
+
+	//////// CRUD for clusters & cluster_tags tables ////////
+	def getNextClusterId() : Int = {
+		val rs = session.execute("SELECT MAX(id) as max_id FROM test01.clusters")
+		val row = rs.one()
+
+		row.getInt("max_id") + 1
 	}
 
 	def fetchCluster(id: Int) : (Int, String, String) = {
@@ -135,27 +173,22 @@ object CassandraClient {
 		(id, row.getString("articles_json"), row.getString("scores_json"))
 	}
 
-	// TODO: don't do this; store in a config table instead
-	def getNextClusterId() : Int = {
-		val rs = session.execute("SELECT MAX(id) as max_id FROM test01.clusters")
-		val row = rs.one()
-
-		row.getInt("max_id") + 1
-	}
-
-	def insertCluster(newId: Int, articlesJson: String, topScoresJson: String, tags: Vec) : Unit = {
+	def insertCluster(id: Int, articlesJson: String, scoresJson: String) : Unit = {
 		session.execute("" +
 			s"INSERT INTO test01.clusters (id, articles_json, scores_json) " +
-			s"VALUES ($newId, $$$$$articlesJson$$$$, '$topScoresJson')"
-		)
-
-		session.execute("" +
-			s"INSERT INTO test01.cluster_tags (id, ${sortedTagNames.mkString(", ")}) " +
-			s"VALUES ($newId, ${tags.mkString(", ")})"
+			s"VALUES ($id, $$$$$articlesJson$$$$, '$scoresJson')"
 		)
 	}
 
-	def fetchSomeClusterTags(tags: List[String]) : mutable.Map[Int, Vec] = {
+	def updateCluster(id: Int, articlesJson: String, scoresJson: String): Unit = {
+		session.execute("" +
+			s"UPDATE test01.clusters " +
+			s"SET articles_json = $$$$$articlesJson$$$$, scores_json = '$scoresJson' " +
+			s"WHERE id = $id"
+		)
+	}
+
+	def fetchClusterTags(tags: List[String]) : mutable.Map[Int, Vec] = {
 		val rs = session.execute(s"SELECT id, ${tags.mkString(", ")} FROM test01.cluster_tags")
 		val rows = rs.all()
 
@@ -167,42 +200,10 @@ object CassandraClient {
 		idToTags
 	}
 
-	def updateUser(userId: Int, newClusterId: Int) : Unit = {
+	def insertClusterTags(id: Int, tagValues: Vec): Unit = {
 		session.execute("" +
-			s"UPDATE test01.users " +
-			s"SET cluster_id = $newClusterId " +
-			s"WHERE id = $userId"
-		)
-	}
-
-	def insertArticle(id: Int, articleJson: String): Unit = {
-		// got cash?
-		session.execute("" +
-			s"INSERT INTO test01.articles (id, article_json) " +
-			s"VALUES ($id, $$$$$articleJson$$$$)"
-		)
-	}
-
-	def insertArticleTags(id: Int, tags: Array[String], tagValues: Array[Int]): Unit = {
-		val tags_csv = tags.mkString(", ")
-		val vals_csv = tagValues.mkString(", ")
-
-		session.execute("" +
-			s"INSERT INTO test01.article_tags (id, $tags_csv) " +
-			s"VALUES ($id, $vals_csv)"
-		)
-	}
-
-	def fetchClusterArticlesJson(id: Int) : String = {
-		val rs = session.execute(s"SELECT * FROM test01.clusters where id = $id")
-		rs.one().getString("articles_json")
-	}
-
-	def updateCluster(id: Int, articlesJson: String, scoresJson: String): Unit = {
-		session.execute("" +
-			s"UPDATE test01.clusters " +
-			s"SET articles_json = $$$$$articlesJson$$$$, scores_json = '$scoresJson' " +
-			s"WHERE id = $id"
+			s"INSERT INTO test01.cluster_tags (id, ${sortedTagNames.mkString(", ")}) " +
+			s"VALUES ($id, ${tagValues.mkString(", ")})"
 		)
 	}
 }

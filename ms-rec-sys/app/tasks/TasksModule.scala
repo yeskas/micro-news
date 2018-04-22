@@ -176,7 +176,8 @@ class Tasks @Inject() (actorSystemNI: ActorSystem)
 
 
 			println(topArticlesJson)
-			CassandraClient.insertCluster(clusterIdShift + i, topArticlesJson, topScoresJson, kMeans.means(i))
+			CassandraClient.insertCluster(clusterIdShift + i, topArticlesJson, topScoresJson)
+			CassandraClient.insertClusterTags(clusterIdShift + i, kMeans.means(i))
 		}
 
 		// 8. update user_id -> cluster_id
