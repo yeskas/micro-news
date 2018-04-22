@@ -128,11 +128,11 @@ object CassandraClient {
 		ids.map(i => idToArticleJson(i))
 	}
 
-	def fetchCluster(id: Int) : Row = {
+	def fetchCluster(id: Int) : (Int, String, String) = {
 		val rs = session.execute(s"SELECT * FROM test01.clusters where id = $id")
+		val row = rs.one()
 
-		// TODO: return cluster object?
-		return rs.one()
+		(id, row.getString("articles_json"), row.getString("scores_json"))
 	}
 
 	// TODO: don't do this; store in a config table instead
@@ -175,124 +175,34 @@ object CassandraClient {
 		)
 	}
 
-	def addArticle(id: Int, articleTags: List[String], articleJson: String, article: Article) : Unit = {
-		// For json parsing
-		implicit val formats = DefaultFormats
-
+	def insertArticle(id: Int, articleJson: String): Unit = {
 		// got cash?
 		session.execute("" +
 			s"INSERT INTO test01.articles (id, article_json) " +
 			s"VALUES ($id, $$$$$articleJson$$$$)"
 		)
+	}
 
-		val tags_csv = articleTags.mkString(", ")
-		val vals_csv = Array.fill(articleTags.length)(1).mkString(", ")
+	def insertArticleTags(id: Int, tags: Array[String], tagValues: Array[Int]): Unit = {
+		val tags_csv = tags.mkString(", ")
+		val vals_csv = tagValues.mkString(", ")
 
 		session.execute("" +
 			s"INSERT INTO test01.article_tags (id, $tags_csv) " +
 			s"VALUES ($id, $vals_csv)"
 		)
-
-		// Prepend to the default cluster
-		var rs = session.execute(s"SELECT * FROM test01.clusters where id = $DEFAULT_CLUSTER_ID")
-		var row = rs.one()
-		var oldJson = row.getString("articles_json")
-
-		// Prepend to default cluster & remove the oldest (last) article
-		val oldArticles = parse(oldJson).extract[List[Article]]
-		val newArticles = mutable.ArrayBuffer(articleJson)
-		for (article <- oldArticles) {
-			newArticles += compact(render(
-				("id" -> article.id) ~
-					("link" -> article.link) ~
-					("title" -> article.title) ~
-					("body" -> article.body) ~
-					("image" -> article.image) ~
-					("timestamp" -> article.timestamp) ~
-					("source" ->
-						("name" -> article.source.name) ~
-							("link" -> article.source.link) ~
-							("icon" -> article.source.icon)
-						) ~
-					("tags" -> article.tags)
-			))
-		}
-		newArticles.trimEnd(1)
-
-		val newJson = newArticles.mkString("[", ", ", "]")
-		println(newJson)
-		println("------------------")
-		session.execute("" +
-			s"UPDATE test01.clusters " +
-			s"SET articles_json = $$$$$newJson$$$$" +
-			s"WHERE id = $DEFAULT_CLUSTER_ID"
-		)
-
-
-
-
-
-
-		// Add to non-default clusters
-		val idToTagValues = fetchSomeClusterTags(articleTags)
-		for ((id, tagValues) <- idToTagValues) {
-			if (id != DEFAULT_CLUSTER_ID) {
-				val score = tagValues.sum
-				val cluster = fetchCluster(id)
-
-				val oldArticles = parse(cluster.getString("articles_json")).extract[List[Article]].to[mutable.ArrayBuffer]
-				val oldScores = parse(cluster.getString("scores_json")).extract[List[Double]].to[mutable.ArrayBuffer]
-
-				if (oldScores.last <= score) {
-					oldArticles.trimEnd(1)
-					oldScores.trimEnd(1)
-
-					// Insert into sorted ArrayBuffer
-					var insertIdx = oldScores.length
-					for (idx <- (oldScores.length - 1) to 0 by -1) {
-						if (score >= oldScores(idx)) {
-							insertIdx = idx
-						}
-					}
-					oldArticles.insert(insertIdx, article)
-					oldScores.insert(insertIdx, score)
-
-
-					val newArticles = mutable.ArrayBuffer[String]()
-					for (article <- oldArticles) {
-						newArticles += compact(render(
-							("id" -> article.id) ~
-								("link" -> article.link) ~
-								("title" -> article.title) ~
-								("body" -> article.body) ~
-								("image" -> article.image) ~
-								("timestamp" -> article.timestamp) ~
-								("source" ->
-									("name" -> article.source.name) ~
-										("link" -> article.source.link) ~
-										("icon" -> article.source.icon)
-									) ~
-								("tags" -> article.tags)
-						))
-					}
-
-					val newArticlesJson = newArticles.mkString("[", ", ", "]")
-					val newScoresJson = oldScores.mkString("[", ", ", "]")
-					println("+++++++++++++")
-					println(newArticlesJson)
-					println(newScoresJson)
-					session.execute("" +
-						s"UPDATE test01.clusters " +
-						s"SET articles_json = $$$$$newArticlesJson$$$$, scores_json = '$newScoresJson' " +
-						s"WHERE id = $id"
-					)
-
-				}
-			}
-		}
-
-
 	}
 
+	def fetchClusterArticlesJson(id: Int) : String = {
+		val rs = session.execute(s"SELECT * FROM test01.clusters where id = $id")
+		rs.one().getString("articles_json")
+	}
 
+	def updateCluster(id: Int, articlesJson: String, scoresJson: String): Unit = {
+		session.execute("" +
+			s"UPDATE test01.clusters " +
+			s"SET articles_json = $$$$$articlesJson$$$$, scores_json = '$scoresJson' " +
+			s"WHERE id = $id"
+		)
+	}
 }
