@@ -1,11 +1,11 @@
 -- These are cql queries, but using the .sql extension for the IDE
 
-DROP TABLE test01.users;
-DROP TABLE test01.user_tags;
-DROP TABLE test01.articles;
-DROP TABLE test01.article_tags;
-DROP TABLE test01.clusters;
-DROP TABLE test01.cluster_tags;
+DROP TABLE rs.users;
+DROP TABLE rs.user_tags;
+DROP TABLE rs.articles;
+DROP TABLE rs.article_tags;
+DROP TABLE rs.clusters;
+DROP TABLE rs.cluster_tags;
 
 CREATE TABLE users (
 	id INT PRIMARY KEY,
