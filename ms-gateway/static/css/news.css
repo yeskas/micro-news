@@ -54,6 +54,11 @@ a.news-item-link {
 	text-decoration: none;
 }
 
+
+.news-item-source .publish-date {
+	color: gray;
+}
+
 .news-item-source-icon {
 	border-radius: 1px;
 	object-fit: cover;

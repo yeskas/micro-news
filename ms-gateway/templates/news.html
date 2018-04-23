@@ -68,10 +68,12 @@
 										<img src="{{ item.source.icon }}" class="media-object news-item-source-icon">
 									</div>
 									<div class="media-body">
-										{% set tooltip_title = ' ' %}
 										<a href="{{ item.source.link }}" target="_blank">
 											{{ item.source.name }}
 										</a>
+										<span class="publish-date">
+											- {{item.publish_date}}
+										</span>
 									</div>
 								</div>
 							</div>

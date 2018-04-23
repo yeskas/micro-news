@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import pika
 import requests
@@ -42,6 +43,25 @@ class Article(object):
 
 		# Cut at last char
 		return body + '...'
+
+	# Returns human-readable text for how old the article is
+	@staticmethod
+	def get_age(utc_string):
+		utc_now = datetime.utcnow()
+		utc_then = datetime.strptime(utc_string, "%Y-%m-%d %H:%M:%S")
+		delta = utc_now - utc_then
+		hours = delta.seconds / (60 * 60)
+
+		if delta.days >= 2:
+			return '%s days ago' % delta.days
+
+		if delta.days == 1:
+			return 'Yesterday'
+
+		if hours >= 2:
+			return '%s hours ago' % hours
+
+		return '1 hour ago'
 
 
 # Store connection to rabbitmq & ms-rec-sys channel in app context
@@ -110,6 +130,8 @@ def index():
 		body = item.pop('body', '')
 		if 'subtitle' not in item:
 			item['subtitle'] = Article.extract_subtitle(body)
+
+		item['publish_date'] = Article.get_age(item['timestamp'])
 
 	return render_template('news.html', user=user, items=items)
 
