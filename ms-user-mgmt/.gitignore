@@ -27,3 +27,6 @@ ms-user-mgmt.iml
 
 # Spring builds
 target/
+
+# DB config
+src/main/resources/application.properties
