@@ -1,7 +1,7 @@
 package helpers
 
 
-// Project-wise constants
+// Project constants
 object Configs {
 	// K in the K-Means algorithm
 	val CLUSTERING_K = 2
@@ -14,4 +14,7 @@ object Configs {
 
 	// The cluster with latest news & no tags
 	val DEFAULT_CLUSTER_ID = 0
+
+	// Expire articles so that users don't see stale news
+	val ARTICLE_TTL_IN_DAYS = 3
 }

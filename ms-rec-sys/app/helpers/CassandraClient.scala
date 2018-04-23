@@ -160,10 +160,13 @@ object CassandraClient {
 	}
 
 	def insertArticle(id: Int, articleJson: String): Unit = {
+		val ttl = ARTICLE_TTL_IN_DAYS * 24 * 60 * 60
+
 		// got cash?
 		session.execute("" +
 			s"INSERT INTO rs.articles (id, article_json) " +
-			s"VALUES ($id, $$$$$articleJson$$$$)"
+			s"VALUES ($id, $$$$$articleJson$$$$) " +
+			s"USING TTL $ttl"
 		)
 	}
 
@@ -180,12 +183,15 @@ object CassandraClient {
 	}
 
 	def insertArticleTags(id: Int, tags: Array[String], tagValues: Array[Int]): Unit = {
+		val ttl = ARTICLE_TTL_IN_DAYS * 24 * 60 * 60
+
 		val tags_csv = tags.mkString(", ")
 		val vals_csv = tagValues.mkString(", ")
 
 		session.execute("" +
 			s"INSERT INTO rs.article_tags (id, $tags_csv) " +
-			s"VALUES ($id, $vals_csv)"
+			s"VALUES ($id, $vals_csv) " +
+			s"USING TTL $ttl"
 		)
 	}
 

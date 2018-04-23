@@ -5,6 +5,7 @@ import scala.math.sqrt
 import Types._
 
 
+// Basic linear algebra helper functions
 object LinearAlgebra {
 	// Scale vector down by its length
 	def normalize(vector: Vec): Vec = {

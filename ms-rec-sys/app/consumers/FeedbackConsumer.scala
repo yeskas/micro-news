@@ -16,6 +16,7 @@ import helpers.CassandraClient
 case class Feedback(userId: Int, articleId: Int)
 
 
+// RabbitMQ message handler for user feedback
 object FeedbackConsumer {
 	def handleMessage(feedbackJson: String): Unit = {
 		// Parse out the feedback object

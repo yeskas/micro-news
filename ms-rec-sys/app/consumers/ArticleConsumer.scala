@@ -19,6 +19,7 @@ case class Article(id: Int, link: String, title: String, body: String, image: St
 				   source: ArticleSource, tags: List[String])
 
 
+// RabbitMQ message handler for articles
 object ArticleConsumer {
 
 	// Converts list of articles to json string
