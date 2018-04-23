@@ -200,7 +200,7 @@ class Tasks @Inject() (actorSystemNI: ActorSystem)
 	// Schedule the task to:
 	// - 1. recluster users, and
 	// - 2. assign the news per cluster
-	actorSystemNI.scheduler.schedule(initialDelay = 1.second, interval = 1.day) {
+	actorSystemNI.scheduler.schedule(initialDelay = 5.minutes, interval = 1.hour) {
 		println("--- Starting the Recluster task in CUSTOM CTX ---")
 
 		feedbackConsumer.close()
@@ -212,6 +212,7 @@ class Tasks @Inject() (actorSystemNI: ActorSystem)
 			articleConsumer.closed.foreach { _ =>
 				stepAssignNewsToClusters(kMeans)
 				articleConsumer = registerArticleConsumer(rabbitControl)
+				// TODO: delete stale clusters here
 			}
 		}
 	}
